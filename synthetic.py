@@ -232,7 +232,7 @@ class Scene:
         """Initialize scene as a number of geometric promitives in 3D
         """
         self.objects = []
-        self.objects.append(Box(0, 0.5, 0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0))
+        #self.objects.append(Box(0, 0.5, 0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0))
         self.objects.append(Box(1, 0.25, -3.0, 0.5, 0.5, 0.5, 0.0, 0.0, 0.0))
 
 class FeatureTracker:
