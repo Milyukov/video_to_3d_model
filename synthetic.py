@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
 import tqdm
+from numpy.linalg import solve, qr
 
 def get_rotation_matrix(roll, pitch, yaw):
     yaw_rad = np.deg2rad(yaw)
@@ -191,35 +192,26 @@ class Box:
             point = l0 + t * ray
 
             # check if projection of point is inside the borders of the plane
-            # p0 = plane.points[:, 0:1]
-            # p1 = plane.points[:, 1:2]
-            # p2 = plane.points[:, 2:3]
-            # p3 = plane.points[:, 3:4]
+            p0 = plane.points[:, 0:1]
+            p1 = plane.points[:, 1:2]
+            p2 = plane.points[:, 2:3]
+            p3 = plane.points[:, 3:4]
 
-            # p = point - p0
-            # r1 = p1 - p0
-            # r2 = p3 - p0
+            r = point - p0
+            r1 = p1 - p0
+            r2 = p3 - p0
 
-            # if 0 <= np.dot(p.T, r1) <= np.dot(r1.T, r1):
-            #     if 0 <= np.dot(p.T, r2) <= np.dot(r2.T, r2):
-            #         return point
+            A = np.concatenate((r1, r2), axis=1)
+            Q, R = qr(A)
+            b = np.dot(Q.T, r)
+            if np.all(b[2, :] == 0) and np.all(R[2, :] == 0):
+                R = R[:2, :]
+                b = b[:2]
+                x = solve(R, b)
 
-            # p_p0 = point - p0
-            # p_p1 = point - p1
-            # p_p2 = point - p2
-            # p_p3 = point - p3
-            # if np.dot(p_p0.T, p_p2) <= 0 and np.dot(p_p1.T, p_p3) <= 0:
-            #     return point
-
-
-            if point[0] >= np.min(plane.points[0, :]) and point[0] <= np.max(plane.points[0, :]):
-                if point[1] >= np.min(plane.points[1, :]) and point[1] <= np.max(plane.points[1, :]):
-                    if point[2] >= np.min(plane.points[2, :]) and point[2] <= np.max(plane.points[2, :]):
+                if 0 <= x[0] <= 1:
+                    if 0 <= x[1] <= 1:
                         return point
-
-            # if np.dot(p0.T, p1 - p0) <= np.dot(point.T, p1 - p0) <= np.dot(p1.T, p1 - p0):
-            #     if np.dot(p0.T, p3 - p0) <= np.dot(point.T, p3 - p0) <= np.dot(p3.T, p3 - p0):
-            #         return point
 
         return point if debug else None
 
