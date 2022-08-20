@@ -20,33 +20,27 @@ def get_rotation_matrix(roll, pitch, yaw):
         [np.sin(yaw_rad), 0.0, np.cos(yaw_rad)]  
     ])
     # pitch
-    R_picth = np.array([
+    R_pitch = np.array([
         [1.0, 0.0, 0.0],
         [0.0, np.cos(pitch_rad), -np.sin(pitch_rad)],
         [0.0, np.sin(pitch_rad), np.cos(pitch_rad)]  
     ])
 
-    R = np.dot(R_yaw, np.dot(R_picth, R_roll))
+    R = np.dot(R_yaw, np.dot(R_pitch, R_roll))
     return R
 
-class Camera:
+class Intrinsics:
 
-    def __init__(self, fx, fy, cx, cy, width, height, x, y, z, roll, pitch, yaw) -> None:
-        """Initialize pinhole camera
+    def __init__(self, fx, fy, cx, cy, width, height) -> None:
+        """Intrinsic parameters of the camera
 
         Args:
-            fx (double): _description_
-            fy (double): _description_
-            cx (double): _description_
-            cy (double): _description_
+            fx (double): focal distance in meters multiplied by number of pixels per meter for X-axis, pixels
+            fy (double): focal distance in meters multiplied by number of pixels per meter for Y-axis, pixels
+            cx (double): x-coordinate of optical center projection on matrix, pixels
+            cy (double): y-coordinate of optical center projection on matrix, pixels
             width (int): image width, pixels
             height (int): image height, pixels
-            x (double): x-coordiante of camera optical center in world axes, m
-            y (double): y-coordiante of camera optical center in world axes, m
-            z (double): z-coordiante of camera optical center in world axes, m
-            roll (double): roll angle of camera rotation in world axes, degress
-            pitch (double): pitch angle of camera rotation in world axes, degress
-            yaw (double): yaw angle of camera rotation in world axes, degress
         """
         self.K = np.array([
             [fx, 0.0, cx],
@@ -56,12 +50,26 @@ class Camera:
         self.K_inv = np.linalg.inv(self.K)
         self.width = width
         self.height = height
+
+class Camera:
+
+    def __init__(self, intrinsics, position, orientation) -> None:
+        """Initialize pinhole camera
+
+        Args:
+            intrinsics(Intrinsics): intrinsic parameters of the camera
+            position (tuple): coordiantes of camera optical center in world axes, m
+            orientation (tuple): camera rotation in world axes, degress
+        """
+        self.intrinsics = intrinsics
+        x, y, z = position
         self.center = np.array([[
             x, y, z
         ]]).T
-
+        
+        roll, pitch, yaw = orientation
         self.R = get_rotation_matrix(roll, pitch, yaw)
-
+        # maximum distance of visibility in meters
         self.max_distance = 40
 
     def project_points(self):
@@ -83,18 +91,18 @@ class Camera:
         Args:
             scene (Scene): instance of class Scene, describing scene in 3D as a list of objects
         """
-        rendered_scene = np.zeros((self.height, self.width, 3), np.uint8)
+        rendered_scene = np.zeros((self.intrinsics.height, self.intrinsics.width, 3), np.uint8)
         # for each pixel
-        for y in tqdm.tqdm(range(self.height)):
-            for x in range(self.width):
+        for y in tqdm.tqdm(range(self.intrinsics.height)):
+            for x in range(self.intrinsics.width):
                 # reconstruct a ray
                 pix_hom = np.array([[x, y, 1.0]]).T
-                ray = np.dot(self.K_inv, pix_hom)
+                ray = np.dot(self.intrinsics.K_inv, pix_hom)
                 ray = np.dot(self.R.T, ray)
                 # intersect a ray with a scene
                 intersection_points = []
                 for obj in scene.objects:
-                    intersection_points.extend(obj.find_intersections(ray, self.center))
+                    intersection_points.extend(obj.find_all_intersections(ray, self.center))
                 if len(intersection_points) > 0:
                     # find closest point of intersection
                     min_dist = np.inf
@@ -204,18 +212,18 @@ class Box:
             A = np.concatenate((r1, r2), axis=1)
             Q, R = qr(A)
             b = np.dot(Q.T, r)
-            if np.all(b[2, :] == 0) and np.all(R[2, :] == 0):
-                R = R[:2, :]
-                b = b[:2]
-                x = solve(R, b)
+            #if np.all(b[2, :] == 0) and np.all(R[2, :] == 0):
+            # R = R[:2, :]
+            # b = b[:2]
+            x = solve(R, b)
 
-                if 0 <= x[0] <= 1:
-                    if 0 <= x[1] <= 1:
-                        return point
+            if 0 <= x[0] <= 1:
+                if 0 <= x[1] <= 1:
+                    return point
 
         return point if debug else None
 
-    def find_intersections(self, ray, p0):
+    def find_all_intersections(self, ray, p0):
         """Find all intersection points of box with given ray
 
         Args:
@@ -265,6 +273,9 @@ class FeatureTracker:
 if __name__ == '__main__':
     w = 960
     h = 540
+    intrinsics = Intrinsics(fx=500, fy=500, cx=w/2, cy=h/2, width=w, height=h)
+
+
     out = cv2.VideoWriter('rendered.avi', cv2.VideoWriter_fourcc(*'DIVX'), 1.0, (w, h), True)
     # initialize scene
     scene = Scene()
@@ -275,7 +286,9 @@ if __name__ == '__main__':
     zs = [-np.sqrt(r ** 2 - x ** 2) for x in xs]
     zs = [z if not np.isnan(z) else r for z in zs]
     for index, (x, z) in enumerate(zip(xs, zs)):
-        cameras.append(Camera(500, 500, 480, 270, w, h, x, 0.5, z, 0, 0, 0))#-180 * np.arctan(z / r) / np.pi))
+        position = (x, 0.5, z)
+        orientation = (0, 0, 0) #-180 * np.arctan(z / r) / np.pi))
+        cameras.append(Camera(intrinsics, position, orientation))
     frames = []
 
     # font

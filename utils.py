@@ -5,7 +5,7 @@ from synthetic import Box
 def px_coord_xz(coord):
     return (np.int((-coord[0] + 5.0) * 100), np.int((-coord[2] + 5.0) * 100))
 
-def draw_for_a_plane(plane, image, origin, color, ray=None):
+def draw_xz_projection_for_a_plane(plane, image, origin, color, ray=None):
     points = np.concatenate((plane.p0, plane.points), axis=1).T
     for p_id in range(len(points)):
         p = points[p_id:p_id+1, :].T
