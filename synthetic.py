@@ -181,8 +181,8 @@ class Box:
         # estimate normal vector for each plane as a vector product of two edges constructing a plane
         self.top_plane = Plane(self.points[:, :4], np.cross(self.points[:, 0] - self.points[:, 1], self.points[:, 0] - self.points[:, 3]))
         self.bottom_plane = Plane(self.points[:, 4:], np.cross(self.points[:, 4] - self.points[:, 5], self.points[:, 4] - self.points[:, 7]))
-        self.left_plane = Plane(self.points[:, [0, 3, 4, 7]], np.cross(self.points[:, 0] - self.points[:, 4], self.points[:, 0] - self.points[:, 3]))
-        self.right_plane = Plane(self.points[:, [1, 2, 5, 6]], np.cross(self.points[:, 1] - self.points[:, 2], self.points[:, 1] - self.points[:, 5]))
+        self.left_plane = Plane(self.points[:, [0, 4, 7, 3]], np.cross(self.points[:, 0] - self.points[:, 4], self.points[:, 0] - self.points[:, 3]))
+        self.right_plane = Plane(self.points[:, [1, 2, 6, 5]], np.cross(self.points[:, 1] - self.points[:, 2], self.points[:, 1] - self.points[:, 5]))
         self.front_plane = Plane(self.points[:, [2, 3, 7, 6]], np.cross(self.points[:, 2] - self.points[:, 3], self.points[:, 2] - self.points[:, 6]))
         self.rare_plane = Plane(self.points[:, [0, 1, 5, 4 ]], np.cross(self.points[:, 0] - self.points[:, 1], self.points[:, 0] - self.points[:, 4]))
 
