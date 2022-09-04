@@ -188,40 +188,39 @@ class Box:
 
     @staticmethod
     def find_intersection(ray, l0, plane, debug=False):
-        # plane is parametrized as: ax + by + cz + d = 0
-        # or rather it is parametrized as a point P0 and a normal n
+        # Plane is parametrized as 3 or more points
         # ray is parametrized as starting point l0 and direction l
-        # shift along the ray to point of intersection is t (P = l0 + t * l)
-        # t = (P0 - l0) * n / (l * n)
-        # P = l0 + t * l
-        denom = np.dot(ray.T, plane.normal)
-        if denom != 0:
-            t = np.dot((plane.p0 - l0).T, plane.normal) / denom
-            point = l0 + t * ray
+        # P is intersection point
+        # shift along the ray to the point of intersection P is t (P = l0 + t * l)
+        
+        # Set plane points with l0 as origin
+        p0 = plane.points[:, 0:1] - l0
+        p1 = plane.points[:, 1:2] - l0
+        p3 = plane.points[:, 3:4] - l0
 
-            # check if projection of point is inside the borders of the plane
-            p0 = plane.points[:, 0:1]
-            p1 = plane.points[:, 1:2]
-            p2 = plane.points[:, 2:3]
-            p3 = plane.points[:, 3:4]
+        # Get sides of a rectangle as basis vectors
+        r1 = p1 - p0
+        r2 = p3 - p0
 
-            r = point - p0
-            r1 = p1 - p0
-            r2 = p3 - p0
+        # Form a linear system.
+        # The solution is 
+        # [
+        #  r1 component - b1, 
+        #  r2 component - b2, 
+        #  t - shift along the ray to intersection point
+        # ]
+        A = np.concatenate((r1, r2, -ray), axis=1)
 
-            A = np.concatenate((r1, r2), axis=1)
-            Q, R = qr(A)
-            b = np.dot(Q.T, r)
-            #if np.all(b[2, :] == 0) and np.all(R[2, :] == 0):
-            # R = R[:2, :]
-            # b = b[:2]
-            x = solve(R, b)
+        try:
+            x = solve(A, -p0)
+        except np.linalg.LinAlgError:
+            return None
 
-            if 0 <= x[0] <= 1:
-                if 0 <= x[1] <= 1:
-                    return point
-
-        return point if debug else None
+        # Check if intersection point is within rectangle
+        if 0 <= x[0] <= 1:
+            if 0 <= x[1] <= 1:
+                return l0 + ray*x[2]
+        return l0 + ray*x[2,1] if debug else None
 
     def find_all_intersections(self, ray, p0):
         """Find all intersection points of box with given ray
