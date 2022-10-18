@@ -1,6 +1,8 @@
+from turtle import pos
 import cv2
 import numpy as np
 import tqdm
+import random
 from numpy.linalg import solve, qr
 
 def get_rotation_matrix(roll, pitch, yaw):
@@ -68,6 +70,9 @@ class Camera:
         ]]).T
         
         roll, pitch, yaw = orientation
+        self.roll = roll
+        self.pitch = pitch
+        self.yaw = yaw
         self.R = get_rotation_matrix(roll, pitch, yaw)
         # maximum distance of visibility in meters
         self.max_distance = 40
@@ -269,6 +274,58 @@ class FeatureTracker:
     def track(self, points):
         pass
 
+class DataSampler:
+
+    def __init__(self, pps=10) -> None:
+        self.pps = pps
+
+    @staticmethod
+    def sample_from_plane(plane):
+        # get random coefficients [0, 1]
+        a = random.random()
+        b = random.random()
+        # sample point as a weighted sum of two vectors constructing a rectangle
+        v1, v2 = plane.points[:, 1:2] - plane.points[:, 0:1], plane.points[:, 3:4] - plane.points[:, 0:1]
+        p = a * v1 + b * v2 + plane.points[:, 0:1]
+        return [p[0, 0], p[1, 0], p[2, 0]]
+
+    def sample(self, scene, cameras):
+        """_summary_
+
+        Args:
+            scene (_type_): _description_
+            cameras (_type_): _description_
+            pps (int, optional): _description_. Defaults to 10.
+
+        Returns:
+            _type_: _description_
+        """
+        state = []
+        n_points = 0
+        n_cameras = len(cameras)
+        # for each object in a scene
+        for obj in scene.objects:
+            # randomly sample 3D points on each side (except bottom and top)
+            # for each side sample n points
+            for _ in range(self.pps):
+                state.extend(self.sample_from_plane(obj.front_plane))
+            for _ in range(self.pps):
+                state.extend(self.sample_from_plane(obj.right_plane))
+            for _ in range(self.pps):
+                state.extend(self.sample_from_plane(obj.rare_plane))
+            for _ in range(self.pps):
+                state.extend(self.sample_from_plane(obj.left_plane))
+        # for each camera
+        for cam in cameras:
+            # get 6D pose, position and intrinsics
+            intrinsics = [cam.intrinsics.K[0][0], cam.intrinsics.K[1][1], cam.intrinsics.K[0][2], cam.intrinsics.K[1][2]]
+            rotation = [cam.roll, cam.pitch, cam.yaw]
+            position = [cam.center[0][0], cam.center[1][0], cam.center[2][0]]
+            state.extend(intrinsics)
+            state.extend(rotation)
+            state.extend(position)
+        return state, n_points, n_cameras
+
 if __name__ == '__main__':
     w = 960
     h = 540
@@ -280,6 +337,7 @@ if __name__ == '__main__':
     scene = Scene()
     # initialize cameras and visualize rendered scene on each camera
     cameras = []
+    # set up circle path
     xs = [(10.0 / 18.0) * x - 5.0 for x in range(18)]
     r = 4
     zs = [-np.sqrt(r ** 2 - x ** 2) for x in xs]
@@ -288,6 +346,10 @@ if __name__ == '__main__':
         position = (x, 0.5, z)
         orientation = (0, 0, 0) #-180 * np.arctan(z / r) / np.pi))
         cameras.append(Camera(intrinsics, position, orientation))
+
+    data_sampler = DataSampler()
+    data = data_sampler.sample(scene, cameras)
+
     frames = []
 
     # font
