@@ -1,0 +1,73 @@
+/* [wxMaxima batch file version 1] [ DO NOT EDIT BY HAND! ]*/
+/* [ Created with wxMaxima version 22.04.0 ] */
+/* [wxMaxima: input   start ] */
+load(vect), A)$
+/* [wxMaxima: input   end   ] */
+
+
+/* [wxMaxima: input   start ] */
+X: matrix([x], [y], [z], [1]), A)$
+/* [wxMaxima: input   end   ] */
+
+
+/* [wxMaxima: input   start ] */
+R:matrix(
+    [r_11, r_12, r_13, t_x],
+    [r_21, r_22, r_23, t_y],
+    [r_31, r_32, r_33,t_z]
+    
+), A)$
+/* [wxMaxima: input   end   ] */
+
+
+/* [wxMaxima: input   start ] */
+K:matrix(
+    [f_x, 0,    u_0],
+    [0,    f_y, v_0]
+), A)$
+/* [wxMaxima: input   end   ] */
+
+
+/* [wxMaxima: input   start ] */
+P: l*K.R.X$
+/* [wxMaxima: input   end   ] */
+
+
+/* [wxMaxima: input   start ] */
+A:matrix()$
+    A:addcol(diff(P, x), A)$ 
+   
+
+/* [wxMaxima: input   end   ] */
+
+
+/* [wxMaxima: input   start ] */
+diff(P,v_0);
+/* [wxMaxima: input   end   ] */
+
+
+/* [wxMaxima: input   start ] */
+ A:addcol(diff(P, y), A)$ 
+    A:addcol(diff(P, z), A)$ 
+    A:addcol(diff(P, r_11), A)$ 
+    A:addcol(diff(P, r_12), A)$ 
+    A:addcol(diff(P, r_13), A)$ 
+    A:addcol(diff(P, r_21), A)$ 
+    A:addcol(diff(P, r_22), A)$
+    A:addcol(diff(P, r_23), A)$
+    A:addcol(diff(P, r_31), A)$ 
+    A:addcol(diff(P, r_32), A)$ 
+    A:addcol(diff(P, r_33), A)$
+    A:addcol(diff(P, t_x), A)$ 
+    A:addcol(diff(P, t_y), A)$ 
+    A:addcol(diff(P, t_z), A)$
+    A:addcol(diff(P, f_x), A)$ 
+    A:addcol(diff(P, f_y), A)$ 
+    A:addcol(diff(P, u_0), A)$ 
+    A:addcol(diff(P,v_0), A)$
+/* [wxMaxima: input   end   ] */
+
+
+
+/* Old versions of Maxima abort on loading files that end in a comment. */
+"Created with wxMaxima 22.04.0"$
