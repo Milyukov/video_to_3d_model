@@ -6,6 +6,15 @@ def px_coord_xz(coord):
     return (np.int((-coord[0] + 5.0) * 100), np.int((-coord[2] + 5.0) * 100))
 
 def draw_xz_projection_for_a_plane(plane, image, origin, color, ray=None):
+    """_summary_
+    Renders projection of a plane given it's parameters and virtual camera defined by origin and ray
+    Args:
+        plane (Plane): plane parametrization in 3D space
+        image (ndarray): array used as a matrix for a projection
+        origin (ndarray): principal point of a virtual camera
+        color (tuple): color for lines visuzalization
+        ray (ndarray, optional): Direction of a camera's view. Defaults to None.
+    """
     points = np.concatenate((plane.p0, plane.points), axis=1).T
     for p_id in range(len(points)):
         p = points[p_id:p_id+1, :].T

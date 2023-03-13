@@ -338,8 +338,10 @@ if __name__ == '__main__':
     # initialize cameras and visualize rendered scene on each camera
     cameras = []
     # set up circle path
+    # X-components of the camera's positions in 3D space
     xs = [(10.0 / 18.0) * x - 5.0 for x in range(18)]
     r = 4
+    # Z-components of the camera's positions in 3D space
     zs = [-np.sqrt(r ** 2 - x ** 2) for x in xs]
     zs = [z if not np.isnan(z) else r for z in zs]
     for index, (x, z) in enumerate(zip(xs, zs)):
