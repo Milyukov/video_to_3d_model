@@ -1,0 +1,1 @@
+f_y/(cos(pitch)*cos(yaw)*z+y*(sin(pitch)*cos(roll)*cos(yaw)-sin(roll)*sin(yaw))+x*(cos(roll)*sin(yaw)+sin(pitch)*sin(roll)*cos(yaw))+t_z)
