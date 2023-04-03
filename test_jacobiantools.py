@@ -5,8 +5,10 @@ import copy
 import pandas as pd
 
 def make_parameters_dict(point, camera):
-    '''Make a dict with parameters necessary for jackobian evaluation
-    from point and camera'''
+    """
+    Make a dict with parameters necessary for jackobian evaluation
+    from point and camera
+    """
     jackobian_parameters = {
             'f_x': camera.intrinsics.fx, 
             'f_y': camera.intrinsics.fy,
@@ -42,8 +44,10 @@ def generate_circular_movement():
     return positions, orientations
 
 def generate_sample_data(intrinsics, positions, orientations):
-    '''Generates state and projections values for cameras 
-    with given intrinsics, positions and orientations'''
+    """
+    Generates state and projections values for cameras 
+    with given intrinsics, positions and orientations
+    """
     # initialize scene
     scene = Scene()
     # initialize cameras and visualize rendered scene on each camera
@@ -57,7 +61,9 @@ def generate_sample_data(intrinsics, positions, orientations):
     return projections_dict, points_dict, cameras_dict
 
 def get_variated_projection(point, camera, variations):
-    '''Generates projection for given camera and point with variated parameters'''
+    """
+    Generates projection for given camera and point with variated parameters
+    """    
     parameters_change = dict.fromkeys(
         ['point.x', 'point.y', 'point.z', 
          'camera.roll', 'camera.pitch', 'camera.yaw', 
@@ -90,7 +96,9 @@ class TestJacobianIsFull(unittest.TestCase):
         return super().setUp()
 
     def test_all_elements_present(self):
-        '''Test for all elements of a Jackobian are present'''
+        """
+        Test for all elements of a Jackobian are present
+        """
         jackobian_elements = set(
             ['dA1dx', 'dA1dtx', 'dA1dpitch', 'dA1droll', 'dA1dty', 'dA1dtz', 'dA1dy', 'dA1dyaw', 'dA1dz', 
              'dA2dx', 'dA2dtx', 'dA2dpitch', 'dA2droll', 'dA2dty', 'dA2dtz', 'dA2dy', 'dA2dyaw', 'dA2dz']
@@ -98,7 +106,7 @@ class TestJacobianIsFull(unittest.TestCase):
         expressions = set(JacobianTools.parse_jacobians(self.test_path).keys())
         self.assertTrue(
             jackobian_elements.issubset(expressions),
-            msg=f"Missing elements: {expressions.difference(jackobian_elements)}")
+            msg=f"""Missing elements: {expressions.difference(jackobian_elements)}""")
 
 class TestJackobianIsValid(unittest.TestCase):
 
@@ -109,7 +117,8 @@ class TestJackobianIsValid(unittest.TestCase):
         self.const_variations = {
             'point.x': 0.1, 'point.y': 0.1, 'point.z': 0.1,
             'camera.roll': 0.1, 'camera.pitch': 0.1, 'camera.yaw': 0.1,
-            'camera.t_x': 0.1, 'camera.t_y': 0.1, 'camera.t_z': 0.1}
+            'camera.t_x': 0.1, 'camera.t_y': 0.1, 'camera.t_z': 0.1
+            }
         self.variaton_mult = 1
         self.ju_idxs = {
                             'point.x': (0, 0), 'point.y':(0, 1), 'point.z': (0, 2),
@@ -123,17 +132,21 @@ class TestJackobianIsValid(unittest.TestCase):
                         }
         self.approx_delta = 0.1
         self.approx_test_result_columns = [
-            'proj_id', 'variated_parameter',
+            'proj_id', 'variated_parameter', 'direction',
             'point.x', 'point.y', 'point.z', 
             'camera.roll', 'camera.pitch', 'camera.yaw',
             'camera.t_x', 'camera.t_y', 'camera.t_z',
-            'u_nominal', 'u_var', 'v_nominal', 'v_var',
-            'direction', 'approx_dist']
+            'u_nominal', 'v_nominal', 'u_var', 'v_var', 
+            'resid_u', 'resid_v',
+            'jcoeffs_u', 'jcoeffs_v', 'approx_dist'
+            ]
         self.approx_test_results_list = []
         return super().setUp()
     
     def test_parsable_expressions(self):
-        '''Test if Jacobian element strings are valid for eval()'''
+        """
+        Test if Jacobian element strings are valid for eval()
+        """
     
         #make dummy parameters from dummy projection, point and camera
         jacobian_parameters = make_parameters_dict(
@@ -147,7 +160,9 @@ class TestJackobianIsValid(unittest.TestCase):
                 eval(expression, jacobian_parameters)
 
     def test_jacobian_approx(self):
-        '''Test for Jacobian approximating camera model correctly'''
+        """     
+        Test for Jacobian approximating camera model correctly
+        """
         #generate nominal parameter values for system
         projections_dict, points_dict, cameras_dict = generate_sample_data(
             Intrinsics(fx=500, fy=500, cx=480, cy=270, width=960, height=540), 
@@ -170,15 +185,15 @@ class TestJackobianIsValid(unittest.TestCase):
                         if parameter in ['point.x', 'point.y', 'point.z']:
                             jcoeffs = np.array([
                                 [eval(JacobianTools.eval_jacobian_C(self.expressions, *self.ju_idxs[parameter]), 
-                                    jacobian_parameters),
-                                eval(JacobianTools.eval_jacobian_C(self.expressions, *self.jv_idxs[parameter]), 
+                                    jacobian_parameters)],
+                                [eval(JacobianTools.eval_jacobian_C(self.expressions, *self.jv_idxs[parameter]), 
                                     jacobian_parameters)]
                                 ])
                         else:
                             jcoeffs = np.array([
                                 [eval(JacobianTools.eval_jacobian_B(self.expressions, *self.ju_idxs[parameter]),
-                                    jacobian_parameters),
-                                eval(JacobianTools.eval_jacobian_B(self.expressions, *self.jv_idxs[parameter]),
+                                    jacobian_parameters)],
+                                [eval(JacobianTools.eval_jacobian_B(self.expressions, *self.jv_idxs[parameter]),
                                     jacobian_parameters)]
                                 ])
 
@@ -194,26 +209,27 @@ class TestJackobianIsValid(unittest.TestCase):
                                 #nominal projection might fit the image 
                                 #but variated projection still might be off the image
                                 if variated_projection[0, 0] is not None and variated_projection[1, 0] is not None:
-                                    residual = np.array([[
-                                        variated_projection[0, 0] - nominal_projection.x,
-                                        variated_projection[1, 0] - nominal_projection.y
-                                    ]])
+                                    residual = np.array([
+                                        [variated_projection[0, 0] - nominal_projection.x],
+                                        [variated_projection[1, 0] - nominal_projection.y]
+                                    ])
                                     #record the results 
                                     self.approx_test_results_list.append([
-                                        proj_id, parameter, 
+                                        proj_id, parameter, direction,
                                         nominal_point.x, nominal_point.y, nominal_point.z,
                                         nominal_camera.roll, nominal_camera.pitch, nominal_camera.yaw,
                                         nominal_camera.center[0, 0], nominal_camera.center[1, 0], nominal_camera.center[2, 0],
-                                        nominal_projection.x, variated_projection[0, 0], 
-                                        nominal_projection.y, variated_projection[1, 0],
-                                        direction, np.linalg.norm(residual)
+                                        nominal_projection.x, nominal_projection.y,
+                                        variated_projection[0, 0], variated_projection[1, 0],
+                                        residual[0, 0], residual[1, 0],
+                                        jcoeffs[0, 0], jcoeffs[1, 0],  
+                                        np.linalg.norm(residual - jcoeffs * direction * variation)
                                         ])
                             
                                     
                                     #test if approximation is close enough
                                     self.assertAlmostEqual(
-                                        np.linalg.norm(residual), 
-                                        np.linalg.norm(direction * jcoeffs * variation),
+                                        np.linalg.norm(residual - jcoeffs * direction * variation), 0.0,
                                         delta=self.approx_delta)
                     
     def tearDown(self) -> None:
