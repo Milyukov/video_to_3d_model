@@ -155,7 +155,7 @@ class JacobianTools:
         return jacobians
 
     @staticmethod
-    def eval_jacobian_C(jacobians, col, row):
+    def eval_jacobian_C(jacobians, row, col):
         # parameters: x, y, z, fx, fy, v_0, u_0, roll, pitch, yaw, t_x, t_y, t_z
         # dA1 (x-coordinate of pixel)
         if row % 2 == 0:
@@ -182,7 +182,7 @@ class JacobianTools:
         return formula
 
     @staticmethod
-    def eval_jacobian_B(jacobians, col, row):
+    def eval_jacobian_B(jacobians, row, col):
         # parameters: x, y, z, fx, fy, v_0, u_0, roll, pitch, yaw, t_x, t_y, t_z
         # dA1 (x-coordinate of pixel)
         if row % 2 == 0:
@@ -241,7 +241,7 @@ class JacobianTools:
             for row in range(obs_id * 2, obs_id * 2 + 2):
                 # define col for sub-matrix C
                 for col in range(obs.p_id * 3, obs.p_id * 3 + 3):
-                    f = cls.eval_jacobian_C(jacobians, col, row)
+                    f = cls.eval_jacobian_C(jacobians, row, col)
                     f = f.replace('f_x', f'{cam.intrinsics.fx}')
                     f = f.replace('f_y', f'{cam.intrinsics.fy}')
                     f = f.replace('roll', f'{cam.roll}')
@@ -260,7 +260,7 @@ class JacobianTools:
                     jacobian_mtx[row, col] = eval(f)
                 # define col for sub-matrix B
                 for col in range(len(points_dict) * 3 + obs.cam_id * 6, len(points_dict) * 3 + obs.cam_id * 6 + 6):
-                    f = cls.eval_jacobian_B(jacobians, col, row)
+                    f = cls.eval_jacobian_B(jacobians, row, col)
                     f = f.replace('f_x', f'{cam.intrinsics.fx}')
                     f = f.replace('f_y', f'{cam.intrinsics.fy}')
                     f = f.replace('roll', f'{cam.roll}')

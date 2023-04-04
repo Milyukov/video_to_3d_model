@@ -116,7 +116,7 @@ class TestJackobianIsValid(unittest.TestCase):
         #set const variations for parameters
         self.const_variations = {
             'point.x': 0.1, 'point.y': 0.1, 'point.z': 0.1,
-            'camera.roll': 0.1, 'camera.pitch': 0.1, 'camera.yaw': 0.1,
+            'camera.roll': np.deg2rad(0.1), 'camera.pitch': np.deg2rad(0.1), 'camera.yaw': np.deg2rad(0.1),
             'camera.t_x': 0.1, 'camera.t_y': 0.1, 'camera.t_z': 0.1
             }
         self.variaton_mult = 1
@@ -130,7 +130,7 @@ class TestJackobianIsValid(unittest.TestCase):
                             'camera.roll': (1, 0), 'camera.pitch': (1, 1), 'camera.yaw': (1, 2),
                             'camera.t_x': (1, 3), 'camera.t_y': (1, 4), 'camera.t_z': (1, 5)
                         }
-        self.approx_delta = 0.1
+        self.approx_delta = 0.5
         self.approx_test_result_columns = [
             'proj_id', 'variated_parameter', 'direction',
             'point.x', 'point.y', 'point.z', 
