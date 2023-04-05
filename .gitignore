@@ -1,3 +1,4 @@
 *.DS_Store
 *.pyc
-test_results_data
+*.csv
+*.xlsx
