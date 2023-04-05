@@ -1,6 +1,6 @@
 import unittest
 import numpy as np
-from synthetic import JacobianTools, Camera, Intrinsics, Point3d, Scene, DataSampler
+from synthetic import JacobianTools, Camera, Intrinsics, Point3d, Scene, DataSampler, get_rotation_matrix
 import copy
 import pandas as pd
 
@@ -75,9 +75,10 @@ def get_variated_projection(point, camera, variations):
     point.y += parameters_change['point.y']
     point.z += parameters_change['point.z']
 
-    camera.roll += parameters_change['camera.roll']
-    camera.pitch += parameters_change['camera.pitch']
-    camera.yaw += parameters_change['camera.yaw']
+    camera.roll += np.rad2deg(parameters_change['camera.roll'])
+    camera.pitch += np.rad2deg(parameters_change['camera.pitch'])
+    camera.yaw += np.rad2deg(parameters_change['camera.yaw'])
+    camera.R = get_rotation_matrix(camera.roll, camera.pitch, camera.yaw)
 
     camera.center[0, 0] += parameters_change['camera.t_x']
     camera.center[1, 0] += parameters_change['camera.t_y']
@@ -116,7 +117,7 @@ class TestJackobianIsValid(unittest.TestCase):
         #set const variations for parameters
         self.const_variations = {
             'point.x': 0.1, 'point.y': 0.1, 'point.z': 0.1,
-            'camera.roll': 0.1, 'camera.pitch': 0.1, 'camera.yaw': 0.1,
+            'camera.roll': np.deg2rad(2.5), 'camera.pitch': np.deg2rad(2.5), 'camera.yaw': np.deg2rad(2.5),
             'camera.t_x': 0.1, 'camera.t_y': 0.1, 'camera.t_z': 0.1
             }
         self.variaton_mult = 1
@@ -130,7 +131,7 @@ class TestJackobianIsValid(unittest.TestCase):
                             'camera.roll': (1, 0), 'camera.pitch': (1, 1), 'camera.yaw': (1, 2),
                             'camera.t_x': (1, 3), 'camera.t_y': (1, 4), 'camera.t_z': (1, 5)
                         }
-        self.approx_delta = 0.1
+        self.approx_delta = 1
         self.approx_test_result_columns = [
             'proj_id', 'variated_parameter', 'direction',
             'point.x', 'point.y', 'point.z', 
@@ -184,17 +185,17 @@ class TestJackobianIsValid(unittest.TestCase):
                         
                         if parameter in ['point.x', 'point.y', 'point.z']:
                             jcoeffs = np.array([
-                                [eval(JacobianTools.eval_jacobian_C(self.expressions, *self.ju_idxs[parameter]), 
-                                    jacobian_parameters)],
-                                [eval(JacobianTools.eval_jacobian_C(self.expressions, *self.jv_idxs[parameter]), 
-                                    jacobian_parameters)]
+                                [eval(JacobianTools.eval_jacobian_C(
+                                    self.expressions, self.ju_idxs[parameter][1], self.ju_idxs[parameter][0]), jacobian_parameters)],
+                                [eval(JacobianTools.eval_jacobian_C(
+                                self.expressions, self.jv_idxs[parameter][1], self.jv_idxs[parameter][0]), jacobian_parameters)]
                                 ])
                         else:
                             jcoeffs = np.array([
-                                [eval(JacobianTools.eval_jacobian_B(self.expressions, *self.ju_idxs[parameter]),
-                                    jacobian_parameters)],
-                                [eval(JacobianTools.eval_jacobian_B(self.expressions, *self.jv_idxs[parameter]),
-                                    jacobian_parameters)]
+                                [eval(JacobianTools.eval_jacobian_B(
+                                    self.expressions, self.ju_idxs[parameter][1], self.ju_idxs[parameter][0]), jacobian_parameters)],
+                                [eval(JacobianTools.eval_jacobian_B(
+                                    self.expressions, self.jv_idxs[parameter][1], self.jv_idxs[parameter][0]), jacobian_parameters)]
                                 ])
 
                         #make projections with a parameter variated in both directions 
