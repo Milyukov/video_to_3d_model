@@ -1,7 +1,7 @@
 import os
 import cv2
 import numpy as np
-from synthetic import Box
+#from synthetic import Box
 
 def px_coord_xz(coord):
     return (np.int((-coord[0] + 5.0) * 100), np.int((-coord[2] + 5.0) * 100))
