@@ -560,7 +560,7 @@ if __name__ == '__main__':
     projections_dict, points_dict, cameras_dict = data_sampler.sample(scene, cameras)
 
     # generate Jacobian matrix
-    jacobians = JacobianTools.parse_jacobians('/home/gleb/Projects/video_to_3d_model/ba_jacobian_1')
+    jacobians = JacobianTools.parse_jacobians('./ba_jacobian_1')
     JacobianTools.eval_jacobian(jacobians, projections_dict, points_dict, cameras_dict)
 
     frames = []
