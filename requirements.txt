@@ -1,3 +1,5 @@
 opencv
 numpy
 tqdm
+pandas
+openpyxl
