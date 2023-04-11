@@ -1,0 +1,153 @@
+/* [wxMaxima batch file version 1] [ DO NOT EDIT BY HAND! ]*/
+/* [ Created with wxMaxima version 22.04.0 ] */
+/* [wxMaxima: input   start ] */
+load(vect)$
+/* [wxMaxima: input   end   ] */
+
+
+/* [wxMaxima: input   start ] */
+X: matrix([x], [y], [z], [1]);
+/* [wxMaxima: input   end   ] */
+
+
+/* [wxMaxima: input   start ] */
+R_roll:matrix(
+    [cos(roll), -sin(roll), 0],
+    [sin(roll), cos(roll),  0],
+    [0,         0,          1]
+)$
+R_yaw:matrix(
+    [cos(yaw),  0, -sin(yaw)],
+    [0,         1,          0],
+    [sin(yaw), 0,  cos(yaw)]
+)$
+R_pitch:matrix(
+    [1,         0,          0],
+    [0, cos(pitch), -sin(pitch)],
+    [0, sin(pitch),  cos(pitch)]   
+)$
+
+R:R_yaw.R_pitch.R_roll$
+R:addcol(R, matrix(
+        [t_x],
+        [t_y],
+        [t_z]
+    )  
+);
+/* [wxMaxima: input   end   ] */
+
+
+/* [wxMaxima: input   start ] */
+K:matrix(
+    [f_x, 0,    u_0],
+    [0,    f_y, v_0],
+    [0,      0,   1]
+);
+/* [wxMaxima: input   end   ] */
+
+
+/* [wxMaxima: input   start ] */
+P:l*K.R.X;
+/* [wxMaxima: input   end   ] */
+
+
+/* [wxMaxima: input   start ] */
+P:matrix(
+    (l*K.R.X)[1]/(l*K.R.X)[3], 
+    (l*K.R.X)[2]/(l*K.R.X)[3]
+    );
+/* [wxMaxima: input   end   ] */
+
+
+/* [wxMaxima: input   start ] */
+P:factor(trigreduce(P));
+/* [wxMaxima: input   end   ] */
+
+
+/* [wxMaxima: input   start ] */
+A:matrix()$
+A:addcol(A, diff(P, x))$
+A:addcol(A, diff(P, y))$ 
+A:addcol(A, diff(P, z))$ 
+A:addcol(A, diff(P, yaw))$ 
+A:addcol(A, diff(P, pitch))$ 
+A:addcol(A, diff(P, roll))$ 
+A:addcol(A, diff(P, t_x))$ 
+A:addcol(A, diff(P, t_y))$ 
+A:addcol(A, diff(P, t_z))$
+/* [wxMaxima: input   end   ] */
+
+
+/* [wxMaxima: input   start ] */
+A[1,1];
+/* [wxMaxima: input   end   ] */
+
+
+/* [wxMaxima: input   start ] */
+nominal_vals: [ 
+    x_n = 0.112570, y_n = 0.641106,  z_n = -0.594537, 
+    roll_n = 0, pitch_n = 0, yaw_n = 0, 
+    t_xn = 0, t_yn = 0.5, t_zn = 10, 
+    f_xn = 500, f_yn = 500, 
+    u_0n = 480, v_0n = 270 ];
+
+variations: [ 
+    x_v = 0, y_v = 0, z_v = 0.1, 
+    roll_v = 0, pitch_v = 0, yaw_v = 0,
+    t_xv = 0, t_yv = 0, t_zv = 0, 
+    f_xv = 0, f_yv = 0, 
+    u_0v = 0, v_0v = 0 ];
+/* [wxMaxima: input   end   ] */
+
+
+/* [wxMaxima: input   start ] */
+nominal_params: subst(
+   nominal_vals,[
+        x = x_n , 
+        y = y_n, 
+        z = z_n, 
+        roll = roll_n , 
+        pitch = pitch_n, 
+        yaw = yaw_n ,
+        t_x = t_xn , 
+        t_y = t_yn , 
+        t_z = t_zn ,
+        f_x = f_xn ,
+        f_y = f_yn ,
+        u_0 = u_0n, 
+        v_0 = v_0n]);
+/* [wxMaxima: input   end   ] */
+
+
+/* [wxMaxima: input   start ] */
+variated_params: subst(
+    append(nominal_vals, variations),[
+        x = x_n + x_v, 
+        y = y_n + y_v, 
+        z = z_n + z_v, 
+        roll = roll_n + roll_v, 
+        pitch = pitch_n + pitch_v, 
+        yaw = yaw_n + yaw_v,
+        t_x = t_xn + t_xv, 
+        t_y = t_yn + t_yv, 
+        t_z = t_zn + t_zv,
+        f_x = f_xn + f_xv,
+        f_y = f_yn + f_yv,
+        u_0 = u_0n + u_0v, 
+        v_0 = v_0n + v_0v]);
+/* [wxMaxima: input   end   ] */
+
+
+/* [wxMaxima: input   start ] */
+proj_nom: subst(nominal_params, P);
+proj_var: subst(variated_params, P);
+residual : proj_var - proj_nom;
+approx_residual: subst( nominal_params,
+    col(A, 3)* 0.1);
+residual - approx_residual;
+/* [wxMaxima: input   end   ] */
+
+
+
+/* Old versions of Maxima abort on loading files that end in a comment. */
+"Created with wxMaxima 22.04.0"$

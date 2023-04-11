@@ -4,6 +4,8 @@ import numpy as np
 import tqdm
 import random
 from numpy.linalg import solve, qr
+from utils import *
+import matplotlib.pyplot as plt
 
 def get_rotation_matrix(roll, pitch, yaw):
     yaw_rad = np.deg2rad(yaw)
@@ -44,6 +46,10 @@ class Intrinsics:
             width (int): image width, pixels
             height (int): image height, pixels
         """
+        self.fx = fx
+        self.fy = fy
+        self.cx = cx
+        self.cy = cy
         self.K = np.array([
             [fx, 0.0, cx],
             [0.0, fy, cy],
@@ -77,8 +83,21 @@ class Camera:
         # maximum distance of visibility in meters
         self.max_distance = 40
 
-    def project_points(self):
-        pass
+    def project_point(self, point3d):
+        point3d_cam = point3d + self.center
+        point2d_hom = np.dot(self.intrinsics.K, np.dot(self.R, point3d_cam))
+        point2d = np.array([point2d_hom[0] / point2d_hom[2], point2d_hom[1] / point2d_hom[2]])
+        if point2d[0] < 0 or point2d[0] >= self.intrinsics.width:
+            return np.array([[None, None]]).T
+        if point2d[1] < 0 or point2d[1] >= self.intrinsics.height:
+            return np.array([[None, None]]).T
+        return point2d
+
+    def project_points(self, points):
+        projected_points = np.zeros((2, len(points)))
+        for col, p in enumerate(points):
+            projected_points[:, col:col + 1] = self.project_point(p)
+        return projected_points.T
     
     def eval_intensity(self, distance):
         if distance > self.max_distance:
@@ -120,10 +139,168 @@ class Camera:
                         rendered_scene[y, x, :] = self.eval_intensity(min_dist)
         return rendered_scene[::-1, ::-1, :]
 
-class Model3D:
+class JacobianTools:
 
-    def __init__(self) -> None:
-        pass
+    @staticmethod
+    def parse_jacobians(path):
+        jacobians = {}
+        for fname in os.listdir(path):
+            if fname.endswith('txt'):
+                with open(os.path.join(path, fname)) as f:
+                    s = f.read()
+                s = s.replace('cos', 'np.cos')
+                s = s.replace('sin', 'np.sin')
+                s = s.replace('^', '**')
+                jacobians[fname.split('.')[0]] = s
+        return jacobians
+
+    @staticmethod
+    def eval_jacobian_C(jacobians, col, row):
+        # parameters: x, y, z, fx, fy, v_0, u_0, roll, pitch, yaw, t_x, t_y, t_z
+        # dA1 (x-coordinate of pixel)
+        if row % 2 == 0:
+            # dA1 / dx
+            if col % 3 == 0:
+                formula = jacobians['dA1dx']
+            # dA1 / dy
+            elif col % 3 == 1:
+                formula = jacobians['dA1dy']
+            # dA1 / dz
+            else:
+                formula = jacobians['dA1dz']
+        # dA2 (y-coordinate of pixel)
+        else:
+            # dA2 / dx
+            if col % 3 == 0:
+                formula = jacobians['dA2dx']
+            # dA2 / dy
+            elif col % 3 == 1:
+                formula = jacobians['dA2dy']
+            # dA2 / dz
+            else:
+                formula = jacobians['dA2dz']
+        return formula
+
+    @staticmethod
+    def eval_jacobian_B(jacobians, col, row):
+        # parameters: x, y, z, fx, fy, v_0, u_0, roll, pitch, yaw, t_x, t_y, t_z
+        # dA1 (x-coordinate of pixel)
+        if row % 2 == 0:
+            # dA1 / droll
+            if col % 6 == 0:
+                formula = jacobians['dA1droll']
+            # dA1 / dpitch
+            elif col % 6 == 1:
+                formula = jacobians['dA1dpitch']
+            # dA1 / dyaw
+            elif col % 6 == 2:
+                formula = jacobians['dA1dyaw']
+            # dA1 / dtx
+            elif col % 6 == 3:
+                formula = jacobians['dA1dtx']
+            # dA1 / dty
+            elif col % 6 == 4:
+                formula = jacobians['dA1dty']
+            # dA1 / dtz
+            else:
+                formula = jacobians['dA1dtz']
+        # dA2 (y-coordinate of pixel)
+        else:
+            # dA1 / droll
+            if col % 6 == 0:
+                formula = jacobians['dA2droll']
+            # dA1 / dpitch
+            elif col % 6 == 1:
+                formula = jacobians['dA2dpitch']
+            # dA1 / dyaw
+            elif col % 6 == 2:
+                formula = jacobians['dA2dyaw']
+            # dA1 / dtx
+            elif col % 6 == 3:
+                formula = jacobians['dA2dtx']
+            # dA1 / dty
+            elif col % 6 == 4:
+                formula = jacobians['dA2dty']
+            # dA1 / dtz
+            else:
+                formula = jacobians['dA2dtz']
+        return formula
+
+    @classmethod
+    def eval_jacobian(cls, jacobians, projections_dict, points_dict, cameras_dict, show=False):
+        '''
+        Jacobian: matrix of partial derivatives
+        rows: observations of state: 2 x N * points (2 rows per point, most of them not visible) + 2 x 6 * M cameras (2 rows per point, w.r.t. visible points)
+        cols: partial derivatives variables: x1, y1, z1, x2, y2, z2, ..., 
+        '''
+        jacobian_mtx = np.zeros((len(projections_dict) * 2, len(points_dict) * 3 + 6 * len(cameras_dict)))
+
+        for obs_id, obs in projections_dict.items():
+            cam = cameras_dict[obs.cam_id]
+            point3d = points_dict[obs.p_id]
+            for row in range(obs_id * 2, obs_id * 2 + 2):
+                # define col for sub-matrix C
+                for col in range(obs.p_id * 3, obs.p_id * 3 + 3):
+                    f = cls.eval_jacobian_C(jacobians, col, row)
+                    f = f.replace('f_x', f'{cam.intrinsics.fx}')
+                    f = f.replace('f_y', f'{cam.intrinsics.fy}')
+                    f = f.replace('roll', f'{cam.roll}')
+                    f = f.replace('pitch', f'{cam.pitch}')
+                    f = f.replace('yaw', f'{cam.yaw}')
+                    f = f.replace('t_x', f'{cam.center[0, 0]}')
+                    f = f.replace('t_y', f'{cam.center[1, 0]}')
+                    f = f.replace('t_z', f'{cam.center[2, 0]}')
+                    f = f.replace('x', f'{point3d.x}')
+                    f = f.replace('y', f'{point3d.y}')
+                    f = f.replace('z', f'{point3d.z}')
+                    if row % 2 == 0:
+                        f = f.replace('u_0', f'{obs.x}')
+                    else:
+                        f = f.replace('v_0', f'{obs.y}')
+                    jacobian_mtx[row, col] = eval(f)
+                # define col for sub-matrix B
+                for col in range(len(points_dict) * 3 + obs.cam_id * 6, len(points_dict) * 3 + obs.cam_id * 6 + 6):
+                    f = cls.eval_jacobian_B(jacobians, col, row)
+                    f = f.replace('f_x', f'{cam.intrinsics.fx}')
+                    f = f.replace('f_y', f'{cam.intrinsics.fy}')
+                    f = f.replace('roll', f'{cam.roll}')
+                    f = f.replace('pitch', f'{cam.pitch}')
+                    f = f.replace('yaw', f'{cam.yaw}')
+                    f = f.replace('t_x', f'{cam.center[0, 0]}')
+                    f = f.replace('t_y', f'{cam.center[1, 0]}')
+                    f = f.replace('t_z', f'{cam.center[2, 0]}')
+                    f = f.replace('x', f'{point3d.x}')
+                    f = f.replace('y', f'{point3d.y}')
+                    f = f.replace('z', f'{point3d.z}')
+                    if row % 2 == 0:
+                        f = f.replace('u_0', f'{obs.x}')
+                    else:
+                        f = f.replace('v_0', f'{obs.y}')
+
+                    jacobian_mtx[row, col] = eval(f)
+        
+
+        def forceAspect(ax,aspect=1):
+            im = ax.get_images()
+            extent =  im[0].get_extent()
+            ax.set_aspect(abs((extent[1]-extent[0])/(extent[3]-extent[2]))/aspect)
+
+        if show:
+            fig = plt.figure()
+            ax = fig.add_subplot(111)
+            ax.imshow(jacobian_mtx)
+            forceAspect(ax)
+            #ax.colorbar()
+            plt.show()
+
+            fig = plt.figure()
+            ax = fig.add_subplot(111)
+            ax.imshow(np.dot(jacobian_mtx.T, jacobian_mtx))
+            forceAspect(ax)
+            plt.show()
+
+
+        return jacobian_mtx
 
 class Plane:
 
@@ -274,9 +451,29 @@ class FeatureTracker:
     def track(self, points):
         pass
 
+class Projection:
+
+    def __init__(self, x, y, cam_id, p_id) -> None:
+        self.x = x
+        self.y = y
+        self.cam_id = cam_id
+        self.p_id = p_id
+
+class Point3d:
+
+    def __init__(self, x, y, z) -> None:
+        self.x = x
+        self.y = y
+        self.z = z
+
 class DataSampler:
 
     def __init__(self, pps=10) -> None:
+        """_summary_
+
+        Args:
+            pps (int, optional): Number of points per plane to sample from. Defaults to 10.
+        """
         self.pps = pps
 
     @staticmethod
@@ -291,40 +488,50 @@ class DataSampler:
 
     def sample(self, scene, cameras):
         """_summary_
-
         Args:
-            scene (_type_): _description_
-            cameras (_type_): _description_
-            pps (int, optional): _description_. Defaults to 10.
+            scene (Scene): instance containing of all 3D objects in the scene
+            cameras (Camera): list of all cameras looking at the scene
 
         Returns:
             _type_: _description_
         """
-        state = []
-        n_points = 0
-        n_cameras = len(cameras)
+        points = []
         # for each object in a scene
         for obj in scene.objects:
             # randomly sample 3D points on each side (except bottom and top)
             # for each side sample n points
             for _ in range(self.pps):
-                state.extend(self.sample_from_plane(obj.front_plane))
+                p = self.sample_from_plane(obj.front_plane)
+                points.append(p)
             for _ in range(self.pps):
-                state.extend(self.sample_from_plane(obj.right_plane))
+                p = self.sample_from_plane(obj.right_plane)
+                points.append(p)
             for _ in range(self.pps):
-                state.extend(self.sample_from_plane(obj.rare_plane))
+                p = self.sample_from_plane(obj.rare_plane)
+                points.append(p)
             for _ in range(self.pps):
-                state.extend(self.sample_from_plane(obj.left_plane))
-        # for each camera
-        for cam in cameras:
-            # get 6D pose, position and intrinsics
-            intrinsics = [cam.intrinsics.K[0][0], cam.intrinsics.K[1][1], cam.intrinsics.K[0][2], cam.intrinsics.K[1][2]]
-            rotation = [cam.roll, cam.pitch, cam.yaw]
-            position = [cam.center[0][0], cam.center[1][0], cam.center[2][0]]
-            state.extend(intrinsics)
-            state.extend(rotation)
-            state.extend(position)
-        return state, n_points, n_cameras
+                p = self.sample_from_plane(obj.left_plane)
+                points.append(p)
+        
+        # add projections to cameras
+        points = np.array(points)
+        points = np.expand_dims(points, axis=-1)
+        # fill the structures
+        projections_dict = {}
+        points_dict = {index: Point3d(points[index][0, 0], points[index][1, 0], points[index][2, 0]) 
+                        for index in range(points.shape[0])}
+        cameras_dict = {}
+        projections_number = 0
+        for cam_id, cam in enumerate(cameras):
+            cameras_dict[cam_id] = cam
+            for p_id, point in enumerate(points):
+                projected_point = cam.project_point(point)
+                x = projected_point[0, 0]
+                y = projected_point[1, 0]
+                if x is not None and y is not None:
+                    projections_dict[projections_number] = Projection(x, y, cam_id, p_id)
+                    projections_number += 1
+        return projections_dict, points_dict, cameras_dict
 
 if __name__ == '__main__':
     w = 960
@@ -350,7 +557,11 @@ if __name__ == '__main__':
         cameras.append(Camera(intrinsics, position, orientation))
 
     data_sampler = DataSampler()
-    data = data_sampler.sample(scene, cameras)
+    projections_dict, points_dict, cameras_dict = data_sampler.sample(scene, cameras)
+
+    # generate Jacobian matrix
+    jacobians = JacobianTools.parse_jacobians('./ba_jacobian_1')
+    JacobianTools.eval_jacobian(jacobians, projections_dict, points_dict, cameras_dict)
 
     frames = []
 
