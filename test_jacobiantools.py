@@ -1,6 +1,12 @@
+import jacobian_tools
+import camera
+import scene_objects
+import scene 
+import sampling
+from utils import get_rotation_matrix
+
 import unittest
 import numpy as np
-from synthetic import JacobianTools, Camera, Intrinsics, Point3d, Scene, DataSampler, get_rotation_matrix
 import copy
 import pandas as pd
 
@@ -28,8 +34,10 @@ def make_parameters_dict(point, camera):
     return jackobian_parameters
 
 def generate_circular_movement():
-    '''sets up circle path for camera
-    returns tuple of lists: (positions, orientations)'''
+    """
+    Sets up circle path for camera,
+    returns tuple of lists: (positions, orientations)
+    """
     positions = []
     orientations = []
     # X-components of the camera's positions in 3D space
@@ -49,15 +57,15 @@ def generate_sample_data(intrinsics, positions, orientations):
     with given intrinsics, positions and orientations
     """
     # initialize scene
-    scene = Scene()
+    sampled_scene = scene.Scene()
     # initialize cameras and visualize rendered scene on each camera
     cameras = []
     
     for position, orientation in zip(positions, orientations):
-        cameras.append(Camera(intrinsics, position, orientation))
+        cameras.append(camera.Camera(intrinsics, position, orientation))
 
-    data_sampler = DataSampler()
-    projections_dict, points_dict, cameras_dict = data_sampler.sample(scene, cameras)
+    data_sampler = sampling.DataSampler()
+    projections_dict, points_dict, cameras_dict = data_sampler.sample(sampled_scene, cameras)
     return projections_dict, points_dict, cameras_dict
 
 def get_variated_projection(point, camera, variations):
@@ -104,7 +112,7 @@ class TestJacobianIsFull(unittest.TestCase):
             ['dA1dx', 'dA1dtx', 'dA1dpitch', 'dA1droll', 'dA1dty', 'dA1dtz', 'dA1dy', 'dA1dyaw', 'dA1dz', 
              'dA2dx', 'dA2dtx', 'dA2dpitch', 'dA2droll', 'dA2dty', 'dA2dtz', 'dA2dy', 'dA2dyaw', 'dA2dz']
             )
-        expressions = set(JacobianTools.parse_jacobians(self.test_path).keys())
+        expressions = set(jacobian_tools.JacobianTools.parse_jacobians(self.test_path).keys())
         self.assertTrue(
             jackobian_elements.issubset(expressions),
             msg=f"""Missing elements: {expressions.difference(jackobian_elements)}""")
@@ -113,7 +121,7 @@ class TestJackobianIsValid(unittest.TestCase):
 
     def setUp(self) -> None:
         self.test_path = 'ba_jacobian_1'
-        self.expressions = JacobianTools.parse_jacobians(self.test_path)
+        self.expressions = jacobian_tools.JacobianTools.parse_jacobians(self.test_path)
         #set const variations for parameters
         self.const_variations = {
             'point.x': 0.1, 'point.y': 0.1, 'point.z': 0.1,
@@ -151,9 +159,9 @@ class TestJackobianIsValid(unittest.TestCase):
     
         #make dummy parameters from dummy projection, point and camera
         jacobian_parameters = make_parameters_dict(
-            Point3d(0, 0, 0),
-            Camera(
-                Intrinsics(fx=500, fy=500, cx=480, cy=270, width=960, height=540), 
+            scene_objects.Point3d(0, 0, 0),
+            camera.Camera(
+                camera.Intrinsics(fx=500, fy=500, cx=480, cy=270, width=960, height=540), 
                 (0, 0.5, 10), (0, 0, 0)))
 
         for expression in self.expressions.values():
@@ -166,7 +174,7 @@ class TestJackobianIsValid(unittest.TestCase):
         """
         #generate nominal parameter values for system
         projections_dict, points_dict, cameras_dict = generate_sample_data(
-            Intrinsics(fx=500, fy=500, cx=480, cy=270, width=960, height=540), 
+            camera.Intrinsics(fx=500, fy=500, cx=480, cy=270, width=960, height=540), 
             [(0, 0.5, 10)],
             [(0, 0, 0)])
         
@@ -185,16 +193,16 @@ class TestJackobianIsValid(unittest.TestCase):
                         
                         if parameter in ['point.x', 'point.y', 'point.z']:
                             jcoeffs = np.array([
-                                [eval(JacobianTools.eval_jacobian_C(
+                                [eval(jacobian_tools.JacobianTools.eval_jacobian_C(
                                     self.expressions, self.ju_idxs[parameter][1], self.ju_idxs[parameter][0]), jacobian_parameters)],
-                                [eval(JacobianTools.eval_jacobian_C(
+                                [eval(jacobian_tools.JacobianTools.eval_jacobian_C(
                                 self.expressions, self.jv_idxs[parameter][1], self.jv_idxs[parameter][0]), jacobian_parameters)]
                                 ])
                         else:
                             jcoeffs = np.array([
-                                [eval(JacobianTools.eval_jacobian_B(
+                                [eval(jacobian_tools.JacobianTools.eval_jacobian_B(
                                     self.expressions, self.ju_idxs[parameter][1], self.ju_idxs[parameter][0]), jacobian_parameters)],
-                                [eval(JacobianTools.eval_jacobian_B(
+                                [eval(jacobian_tools.JacobianTools.eval_jacobian_B(
                                     self.expressions, self.jv_idxs[parameter][1], self.jv_idxs[parameter][0]), jacobian_parameters)]
                                 ])
 

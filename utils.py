@@ -47,3 +47,29 @@ def draw_xz_projection_for_a_plane(plane, image, origin, color, ray=None):
         cv2.line(image, prev_point, first_point, color)
         cv2.imshow("", image)
         cv2.waitKey(0)
+
+def get_rotation_matrix(roll, pitch, yaw):
+    yaw_rad = np.deg2rad(yaw)
+    pitch_rad = np.deg2rad(pitch)
+    roll_rad = np.deg2rad(roll)
+    # roll
+    R_roll = np.array([
+        [np.cos(roll_rad), -np.sin(roll_rad), 0.0],
+        [np.sin(roll_rad), np.cos(roll_rad), 0.0],
+        [0.0, 0.0, 1.0]
+    ])
+    # yaw
+    R_yaw = np.array([
+        [np.cos(yaw_rad), 0.0, -np.sin(yaw_rad)],
+        [0.0, 1.0, 0.0],
+        [np.sin(yaw_rad), 0.0, np.cos(yaw_rad)]  
+    ])
+    # pitch
+    R_pitch = np.array([
+        [1.0, 0.0, 0.0],
+        [0.0, np.cos(pitch_rad), -np.sin(pitch_rad)],
+        [0.0, np.sin(pitch_rad), np.cos(pitch_rad)]  
+    ])
+
+    R = np.dot(R_yaw, np.dot(R_pitch, R_roll))
+    return R
