@@ -1,4 +1,7 @@
-from synthetic import Camera, Intrinsics, Scene, Box
+from camera import Camera, Intrinsics
+import scene
+from scene_objects import Box
+
 import numpy as np
 import matplotlib.pyplot as plt
 from pathlib import Path
@@ -8,7 +11,7 @@ def make_grid():
     '''
     Makes a scene with 3x3 structure of 9 boxes aligned in XY plane
     '''
-    scene_grid = Scene()
+    scene_grid = scene.Scene()
     scene_grid.objects=[]
     scene_grid.objects.append(Box(-3, 3, 0, 1, 1, 1, 0, 0, 0))
     scene_grid.objects.append(Box(0, 3, 0, 1, 1, 1, 0, 0, 0))
@@ -39,7 +42,7 @@ class TestCameraParameters(unittest.TestCase):
 
     def setUp(self) -> None:
         self.default_camera = Camera(Intrinsics(500, 500, 480, 270, 960, 540), (0, 0.5, -10) , (0, 0, 0))
-        self.default_scene = Scene()
+        self.default_scene = scene.Scene()
 
         cam_yaw_pos = Camera(Intrinsics(500, 500, 480, 270, 960, 540), (0, 0.5, -10) , (0, 0, 30))
         cam_yaw_neg = Camera(Intrinsics(500, 500, 480, 270, 960, 540), (0, 0.5, -10) , (0, 0, -30))
