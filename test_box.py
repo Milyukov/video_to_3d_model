@@ -1,4 +1,4 @@
-from synthetic import Box, Plane
+from scene_objects import Box, Plane
 import numpy as np
 import unittest
 
