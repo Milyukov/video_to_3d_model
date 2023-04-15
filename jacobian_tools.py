@@ -105,6 +105,8 @@ class JacobianTools:
                 # define col for sub-matrix C
                 for col in range(obs.p_id * 3, obs.p_id * 3 + 3):
                     f = cls.eval_jacobian_C(jacobians, col, row)
+                    f = f.replace('u_0', f'{cam.intrinsics.fu}')
+                    f = f.replace('v_0', f'{cam.intrinsics.fv}')
                     f = f.replace('f_x', f'{cam.intrinsics.fx}')
                     f = f.replace('f_y', f'{cam.intrinsics.fy}')
                     f = f.replace('roll', f'{cam.roll}')
@@ -116,14 +118,12 @@ class JacobianTools:
                     f = f.replace('x', f'{point3d.x}')
                     f = f.replace('y', f'{point3d.y}')
                     f = f.replace('z', f'{point3d.z}')
-                    if row % 2 == 0:
-                        f = f.replace('u_0', f'{obs.x}')
-                    else:
-                        f = f.replace('v_0', f'{obs.y}')
                     jacobian_mtx[row, col] = eval(f)
                 # define col for sub-matrix B
                 for col in range(len(points_dict) * 3 + obs.cam_id * 6, len(points_dict) * 3 + obs.cam_id * 6 + 6):
                     f = cls.eval_jacobian_B(jacobians, col, row)
+                    f = f.replace('u_0', f'{cam.intrinsics.fu}')
+                    f = f.replace('v_0', f'{cam.intrinsics.fv}')
                     f = f.replace('f_x', f'{cam.intrinsics.fx}')
                     f = f.replace('f_y', f'{cam.intrinsics.fy}')
                     f = f.replace('roll', f'{cam.roll}')
@@ -135,10 +135,6 @@ class JacobianTools:
                     f = f.replace('x', f'{point3d.x}')
                     f = f.replace('y', f'{point3d.y}')
                     f = f.replace('z', f'{point3d.z}')
-                    if row % 2 == 0:
-                        f = f.replace('u_0', f'{obs.x}')
-                    else:
-                        f = f.replace('v_0', f'{obs.y}')
 
                     jacobian_mtx[row, col] = eval(f)
         

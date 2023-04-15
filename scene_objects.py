@@ -1,4 +1,5 @@
 import numpy as np
+
 from utils import get_rotation_matrix
 
 class Point3d:
@@ -18,8 +19,9 @@ class Plane:
 
 class Box:
 
-    def __init__(self, x, y, z, w, h, d, roll, pitch, yaw) -> None:
-        """Constructor of a class describing a box
+    def __init__(self, x, y, z, w, h, d, roll, pitch, yaw, extrinsic_angles=False) -> None:
+        """
+        Constructor of a class describing a box
 
         Args:
             x (double): x-coordinate of the center of a box, m
@@ -62,8 +64,8 @@ class Box:
         ]
         points = np.array(points).T
         # rotate points
-        self.R = get_rotation_matrix(roll, pitch, yaw)
-        self.points = np.dot(self.R, points) + np.array([[x, y, z]]).T
+        self.rotation_matrix = get_rotation_matrix(roll, pitch, yaw, extrinsic=extrinsic_angles)
+        self.points = np.dot(self.rotation_matrix, points) + np.array([[x, y, z]]).T
         # plane is defined by a point on it and a normal vector
         # so each plane is defined by normal vector and 4 points
         # estimate normal vector for each plane as a vector product of two edges constructing a plane
@@ -107,11 +109,12 @@ class Box:
         # Check if intersection point is within rectangle
         if 0 <= x[0] <= 1:
             if 0 <= x[1] <= 1:
-                return l0 + ray*x[2]
-        return l0 + ray*x[2,1] if debug else None
+                return l0 + ray * x[2]
+        return l0 + ray * x[2] if debug else None
 
     def find_all_intersections(self, ray, p0):
-        """Find all intersection points of box with given ray
+        """
+        Find all intersection points of box with given ray
 
         Args:
             ray (ndarray): (x, y, z)-components of a ray

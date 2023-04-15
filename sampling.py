@@ -12,16 +12,17 @@ class FeatureTracker:
 
 class Projection:
 
-    def __init__(self, x, y, cam_id, p_id) -> None:
-        self.x = x
-        self.y = y
+    def __init__(self, u, v, cam_id, p_id) -> None:
+        self.u = u
+        self.v = v
         self.cam_id = cam_id
         self.p_id = p_id
 
 class DataSampler:
 
     def __init__(self, pps=10) -> None:
-        """_summary_
+        """
+        _summary_
 
         Args:
             pps (int, optional): Number of points per plane to sample from. Defaults to 10.
@@ -39,7 +40,8 @@ class DataSampler:
         return [p[0, 0], p[1, 0], p[2, 0]]
 
     def sample(self, scene, cameras):
-        """_summary_
+        """
+        _summary_
         Args:
             scene (Scene): instance containing of all 3D objects in the scene
             cameras (Camera): list of all cameras looking at the scene
@@ -78,9 +80,9 @@ class DataSampler:
             cameras_dict[cam_id] = cam
             for p_id, point in enumerate(points):
                 projected_point = cam.project_point(point)
-                x = projected_point[0, 0]
-                y = projected_point[1, 0]
-                if x is not None and y is not None:
-                    projections_dict[projections_number] = Projection(x, y, cam_id, p_id)
+                u = projected_point[0, 0]
+                v = projected_point[1, 0]
+                if u is not None and v is not None:
+                    projections_dict[projections_number] = Projection(u, v, cam_id, p_id)
                     projections_number += 1
         return projections_dict, points_dict, cameras_dict
