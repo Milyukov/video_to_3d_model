@@ -34,7 +34,7 @@ if __name__ == '__main__':
     projections_dict, points_dict, cameras_dict = data_sampler.sample(scene, cameras)
 
     # generate Jacobian matrix
-    jacobians = jacobian_tools.JacobianTools.parse_jacobians('./ba_jacobian_1')
+    jacobians = jacobian_tools.JacobianTools.parse_jacobians('./ba_jacobian_int')
     jacobian_tools.JacobianTools.eval_jacobian(jacobians, projections_dict, points_dict, cameras_dict)
 
     frames = []

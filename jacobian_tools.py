@@ -18,8 +18,8 @@ class JacobianTools:
         return jacobians
 
     @staticmethod
-    def eval_jacobian_C(jacobians, col, row):
-        # parameters: x, y, z, fx, fy, v_0, u_0, roll, pitch, yaw, t_x, t_y, t_z
+    def eval_jacobian_C(jacobians, row, col):
+        # parameters: x, y, z, fu, fv, v_0, u_0, roll, pitch, yaw, t_x, t_y, t_z
         # dA1 (x-coordinate of pixel)
         if row % 2 == 0:
             # dA1 / dx
@@ -45,8 +45,8 @@ class JacobianTools:
         return formula
 
     @staticmethod
-    def eval_jacobian_B(jacobians, col, row):
-        # parameters: x, y, z, fx, fy, v_0, u_0, roll, pitch, yaw, t_x, t_y, t_z
+    def eval_jacobian_B(jacobians, row, col):
+        # parameters: x, y, z, fu, fv, v_0, u_0, roll, pitch, yaw, t_x, t_y, t_z
         # dA1 (x-coordinate of pixel)
         if row % 2 == 0:
             # dA1 / droll
@@ -105,10 +105,10 @@ class JacobianTools:
                 # define col for sub-matrix C
                 for col in range(obs.p_id * 3, obs.p_id * 3 + 3):
                     f = cls.eval_jacobian_C(jacobians, col, row)
-                    f = f.replace('u_0', f'{cam.intrinsics.fu}')
-                    f = f.replace('v_0', f'{cam.intrinsics.fv}')
-                    f = f.replace('f_x', f'{cam.intrinsics.fx}')
-                    f = f.replace('f_y', f'{cam.intrinsics.fy}')
+                    f = f.replace('u_0', f'{cam.intrinsics.cu}')
+                    f = f.replace('v_0', f'{cam.intrinsics.cv}')
+                    f = f.replace('f_u', f'{cam.intrinsics.fu}')
+                    f = f.replace('f_v', f'{cam.intrinsics.fv}')
                     f = f.replace('roll', f'{cam.roll}')
                     f = f.replace('pitch', f'{cam.pitch}')
                     f = f.replace('yaw', f'{cam.yaw}')
@@ -122,10 +122,10 @@ class JacobianTools:
                 # define col for sub-matrix B
                 for col in range(len(points_dict) * 3 + obs.cam_id * 6, len(points_dict) * 3 + obs.cam_id * 6 + 6):
                     f = cls.eval_jacobian_B(jacobians, col, row)
-                    f = f.replace('u_0', f'{cam.intrinsics.fu}')
-                    f = f.replace('v_0', f'{cam.intrinsics.fv}')
-                    f = f.replace('f_x', f'{cam.intrinsics.fx}')
-                    f = f.replace('f_y', f'{cam.intrinsics.fy}')
+                    f = f.replace('u_0', f'{cam.intrinsics.cu}')
+                    f = f.replace('v_0', f'{cam.intrinsics.cv}')
+                    f = f.replace('f_u', f'{cam.intrinsics.fu}')
+                    f = f.replace('f_v', f'{cam.intrinsics.fv}')
                     f = f.replace('roll', f'{cam.roll}')
                     f = f.replace('pitch', f'{cam.pitch}')
                     f = f.replace('yaw', f'{cam.yaw}')
