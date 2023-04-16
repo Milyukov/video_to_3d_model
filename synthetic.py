@@ -10,10 +10,10 @@ from utils import *
 if __name__ == '__main__':
     w = 960
     h = 540
-    intrinsics = camera.Intrinsics(fx=500, fy=500, cx=w/2, cy=h/2, width=w, height=h)
+    intrinsics = camera.Intrinsics(fu=500, fv=500, cu=w/2, cv=h/2, width=w, height=h)
 
 
-    out = cv2.VideoWriter('rendered.avi', cv2.VideoWriter_fourcc(*'DIVX'), 1.0, (w, h), True)
+    out = cv2.VideoWriter('./test_results_data/rendered.avi', cv2.VideoWriter_fourcc(*'DIVX'), 1.0, (w, h), True)
     # initialize scene
     synthetic_scene = scene.Scene()
     # initialize cameras and visualize rendered scene on each camera
@@ -31,11 +31,11 @@ if __name__ == '__main__':
         cameras.append(camera.Camera(intrinsics, position, orientation))
 
     data_sampler = sampling.DataSampler()
-    projections_dict, points_dict, cameras_dict = data_sampler.sample(scene, cameras)
+    projections_list, points_list = data_sampler.sample(synthetic_scene, cameras)
 
     # generate Jacobian matrix
-    jacobians = jacobian_tools.JacobianTools.parse_jacobians('./ba_jacobian_1')
-    jacobian_tools.JacobianTools.eval_jacobian(jacobians, projections_dict, points_dict, cameras_dict)
+    jacobians = jacobian_tools.JacobianTools.parse_jacobians('./ba_jacobian_int')
+    jacobian_tools.JacobianTools.eval_jacobian(jacobians, projections_list, points_list, cameras)
 
     frames = []
 

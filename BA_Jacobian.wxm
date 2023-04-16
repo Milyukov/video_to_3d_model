@@ -15,23 +15,24 @@ R_roll:matrix(
     [cos(roll), -sin(roll), 0],
     [sin(roll), cos(roll),  0],
     [0,         0,          1]
-)$
-R_yaw:matrix(
-    [cos(yaw),  0, -sin(yaw)],
-    [0,         1,          0],
-    [sin(yaw), 0,  cos(yaw)]
-)$
+);
 R_pitch:matrix(
     [1,         0,          0],
     [0, cos(pitch), -sin(pitch)],
     [0, sin(pitch),  cos(pitch)]   
 )$
 
-R:R_yaw.R_pitch.R_roll$
-R:addcol(R, matrix(
-        [t_x],
-        [t_y],
-        [t_z]
+R_yaw:matrix(
+    [cos(yaw),  0, sin(yaw)],
+    [0,         1,          0],
+    [-sin(yaw), 0,  cos(yaw)]
+)$
+
+M: transpose(R_roll.R_pitch.R_yaw)$
+M_hom:addcol(M, M.matrix(
+        [-t_x],
+        [-t_y],
+        [-t_z]
     )  
 );
 /* [wxMaxima: input   end   ] */
@@ -39,22 +40,17 @@ R:addcol(R, matrix(
 
 /* [wxMaxima: input   start ] */
 K:matrix(
-    [f_x, 0,    u_0],
-    [0,    f_y, v_0],
+    [f_u, 0,    u_0],
+    [0,    f_v, v_0],
     [0,      0,   1]
 );
 /* [wxMaxima: input   end   ] */
 
 
 /* [wxMaxima: input   start ] */
-P:l*K.R.X;
-/* [wxMaxima: input   end   ] */
-
-
-/* [wxMaxima: input   start ] */
 P:matrix(
-    (l*K.R.X)[1]/(l*K.R.X)[3], 
-    (l*K.R.X)[2]/(l*K.R.X)[3]
+    (l*K.M_hom.X)[1]/(l*K.M_hom.X)[3], 
+    (l*K.M_hom.X)[2]/(l*K.M_hom.X)[3]
     );
 /* [wxMaxima: input   end   ] */
 
@@ -69,9 +65,9 @@ A:matrix()$
 A:addcol(A, diff(P, x))$
 A:addcol(A, diff(P, y))$ 
 A:addcol(A, diff(P, z))$ 
-A:addcol(A, diff(P, yaw))$ 
+A:addcol(A, diff(P, roll))$
 A:addcol(A, diff(P, pitch))$ 
-A:addcol(A, diff(P, roll))$ 
+A:addcol(A, diff(P, yaw))$ 
 A:addcol(A, diff(P, t_x))$ 
 A:addcol(A, diff(P, t_y))$ 
 A:addcol(A, diff(P, t_z))$
@@ -79,7 +75,7 @@ A:addcol(A, diff(P, t_z))$
 
 
 /* [wxMaxima: input   start ] */
-A[1,1];
+A[2, 9];
 /* [wxMaxima: input   end   ] */
 
 
@@ -88,14 +84,14 @@ nominal_vals: [
     x_n = 0.112570, y_n = 0.641106,  z_n = -0.594537, 
     roll_n = 0, pitch_n = 0, yaw_n = 0, 
     t_xn = 0, t_yn = 0.5, t_zn = 10, 
-    f_xn = 500, f_yn = 500, 
+    f_un = 500, f_vn = 500, 
     u_0n = 480, v_0n = 270 ];
 
 variations: [ 
     x_v = 0, y_v = 0, z_v = 0.1, 
     roll_v = 0, pitch_v = 0, yaw_v = 0,
     t_xv = 0, t_yv = 0, t_zv = 0, 
-    f_xv = 0, f_yv = 0, 
+    f_uv = 0, f_vv = 0, 
     u_0v = 0, v_0v = 0 ];
 /* [wxMaxima: input   end   ] */
 
@@ -112,8 +108,8 @@ nominal_params: subst(
         t_x = t_xn , 
         t_y = t_yn , 
         t_z = t_zn ,
-        f_x = f_xn ,
-        f_y = f_yn ,
+        f_u = f_un ,
+        f_v = f_vn ,
         u_0 = u_0n, 
         v_0 = v_0n]);
 /* [wxMaxima: input   end   ] */
@@ -131,8 +127,8 @@ variated_params: subst(
         t_x = t_xn + t_xv, 
         t_y = t_yn + t_yv, 
         t_z = t_zn + t_zv,
-        f_x = f_xn + f_xv,
-        f_y = f_yn + f_yv,
+        f_u = f_un + f_uv,
+        f_v = f_vn + f_vv,
         u_0 = u_0n + u_0v, 
         v_0 = v_0n + v_0v]);
 /* [wxMaxima: input   end   ] */

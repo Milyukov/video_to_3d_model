@@ -1,4 +1,5 @@
 import numpy as np
+
 from utils import get_rotation_matrix
 
 class Point3d:
@@ -11,6 +12,12 @@ class Point3d:
 class Plane:
 
     def __init__(self, points, normal) -> None:
+        """
+        Creates a plane parametrization.
+        Args:
+            points (ndarray): array of 3D points on the given rectangle of the plane 3x4
+            normal (ndarray): coordinates of the normal to the plane
+        """
         self.points = points
         self.normal = normal if normal.shape == (3, 1) else np.expand_dims(normal, 1)
         self.d = np.abs(np.dot(np.mean(self.points, axis=1, keepdims=True).T, self.normal))
@@ -18,8 +25,9 @@ class Plane:
 
 class Box:
 
-    def __init__(self, x, y, z, w, h, d, roll, pitch, yaw) -> None:
-        """Constructor of a class describing a box
+    def __init__(self, x, y, z, w, h, d, roll, pitch, yaw, extrinsic_angles=False) -> None:
+        """
+        Constructor of a class describing a box
 
         Args:
             x (double): x-coordinate of the center of a box, m
@@ -31,10 +39,11 @@ class Box:
             roll (double): roll angle, degrees
             pitch (double): pitch  angle, degrees
             yaw (double): yaw  angle, degrees
+            extrinsic_angles(bool): flag signaling whether extrinsic or intrinsic rotation should be applied (yaw->pitch->roll or roll->pitch->yaw).
         """
         self.parameters = (x, y, z, w, h, d, roll, pitch, yaw)
         '''
-                            Y         Z
+                            Y         X
                             ^        / 
                             |       /
                         P0 -|---------P1
@@ -43,7 +52,7 @@ class Box:
                     P3 ----------- P2 |
                      |   |  |  /   |  |
                      |  P4 -|------|--P5
-                     | /    0------| /-------------------> X
+                     | /    0------| /-------------------> Z
                      |/            |/
                      P7 -----------P6
         
@@ -62,12 +71,12 @@ class Box:
         ]
         points = np.array(points).T
         # rotate points
-        self.R = get_rotation_matrix(roll, pitch, yaw)
-        self.points = np.dot(self.R, points) + np.array([[x, y, z]]).T
+        self.rotation_matrix = get_rotation_matrix(roll, pitch, yaw, extrinsic=extrinsic_angles)
+        self.points = np.dot(self.rotation_matrix, points) + np.array([[x, y, z]]).T
         # plane is defined by a point on it and a normal vector
         # so each plane is defined by normal vector and 4 points
         # estimate normal vector for each plane as a vector product of two edges constructing a plane
-        self.top_plane = Plane(self.points[:, :4], np.cross(self.points[:, 0] - self.points[:, 1], self.points[:, 0] - self.points[:, 3]))
+        self.top_plane = Plane(self.points[:, :4], np.cross(self.points[:, 0] - self.points[:, 3], self.points[:, 0] - self.points[:, 1]))
         self.bottom_plane = Plane(self.points[:, 4:], np.cross(self.points[:, 4] - self.points[:, 5], self.points[:, 4] - self.points[:, 7]))
         self.left_plane = Plane(self.points[:, [0, 4, 7, 3]], np.cross(self.points[:, 0] - self.points[:, 4], self.points[:, 0] - self.points[:, 3]))
         self.right_plane = Plane(self.points[:, [1, 2, 6, 5]], np.cross(self.points[:, 1] - self.points[:, 2], self.points[:, 1] - self.points[:, 5]))
@@ -76,10 +85,26 @@ class Box:
 
     @staticmethod
     def find_intersection(ray, l0, plane, debug=False):
+        """
+        Estimates intersection of a ray strating at point l0 with a plane.
+        Args:
+            ray (ndarray): direction of a ray
+            l0 (ndarray): starting point of a ray
+            plane (Plane): given plane
+            debug (bool, optional): Flag signaling whether points outside of 
+            parametrized rectangle of the plane should be returned. Defaults to False.
+
+        Returns:
+            ndarray: intersection point or None
+        """
         # Plane is parametrized as 3 or more points
         # ray is parametrized as starting point l0 and direction l
         # P is intersection point
         # shift along the ray to the point of intersection P is t (P = l0 + t * l)
+
+        # check if ray is co-directed with plane's normal
+        if np.dot(ray.T, plane.normal) < 0:
+            return None
         
         # Set plane points with l0 as origin
         p0 = plane.points[:, 0:1] - l0
@@ -107,14 +132,16 @@ class Box:
         # Check if intersection point is within rectangle
         if 0 <= x[0] <= 1:
             if 0 <= x[1] <= 1:
-                return l0 + ray*x[2]
-        return l0 + ray*x[2,1] if debug else None
+                return l0 + ray * x[2]
+        return l0 + ray * x[2] if debug else None
 
     def find_all_intersections(self, ray, p0):
-        """Find all intersection points of box with given ray
+        """
+        Find all intersection points of box with given ray
 
         Args:
             ray (ndarray): (x, y, z)-components of a ray
+            p0 (ndarray): (x, y, z)-components of a starting point of a ray
         """
         # for each plane
         # check if there's intersection  with a ray inside 4 points range in point P

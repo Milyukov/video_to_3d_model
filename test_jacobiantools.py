@@ -16,10 +16,10 @@ def make_parameters_dict(point, camera):
     from point and camera
     """
     jackobian_parameters = {
-            'f_x': camera.intrinsics.fx, 
-            'f_y': camera.intrinsics.fy,
-            'u_0': camera.intrinsics.cx,
-            'v_0': camera.intrinsics.cy,
+            'f_u': camera.intrinsics.fu, 
+            'f_v': camera.intrinsics.fv,
+            'u_0': camera.intrinsics.cu,
+            'v_0': camera.intrinsics.cv,
             'roll': camera.roll,
             'pitch': camera.pitch,
             'yaw': camera.yaw,
@@ -65,8 +65,8 @@ def generate_sample_data(intrinsics, positions, orientations):
         cameras.append(camera.Camera(intrinsics, position, orientation))
 
     data_sampler = sampling.DataSampler()
-    projections_dict, points_dict, cameras_dict = data_sampler.sample(sampled_scene, cameras)
-    return projections_dict, points_dict, cameras_dict
+    projections_list, points_list = data_sampler.sample(sampled_scene, cameras)
+    return projections_list, points_list, cameras
 
 def get_variated_projection(point, camera, variations):
     """
@@ -83,10 +83,10 @@ def get_variated_projection(point, camera, variations):
     point.y += parameters_change['point.y']
     point.z += parameters_change['point.z']
 
-    camera.roll += np.rad2deg(parameters_change['camera.roll'])
-    camera.pitch += np.rad2deg(parameters_change['camera.pitch'])
-    camera.yaw += np.rad2deg(parameters_change['camera.yaw'])
-    camera.R = get_rotation_matrix(camera.roll, camera.pitch, camera.yaw)
+    camera.roll += parameters_change['camera.roll']
+    camera.pitch += parameters_change['camera.pitch']
+    camera.yaw += parameters_change['camera.yaw']
+    camera.w2c_transform = get_rotation_matrix(camera.roll, camera.pitch, camera.yaw).T
 
     camera.center[0, 0] += parameters_change['camera.t_x']
     camera.center[1, 0] += parameters_change['camera.t_y']
@@ -101,7 +101,7 @@ def get_variated_projection(point, camera, variations):
 class TestJacobianIsFull(unittest.TestCase):
 
     def setUp(self) -> None:
-        self.test_path = 'ba_jacobian_1'
+        self.test_path = 'ba_jacobian_int'
         return super().setUp()
 
     def test_all_elements_present(self):
@@ -117,10 +117,33 @@ class TestJacobianIsFull(unittest.TestCase):
             jackobian_elements.issubset(expressions),
             msg=f"""Missing elements: {expressions.difference(jackobian_elements)}""")
 
-class TestJackobianIsValid(unittest.TestCase):
+class TestExpressionsAreValid(unittest.TestCase):
 
     def setUp(self) -> None:
-        self.test_path = 'ba_jacobian_1'
+        self.test_path = 'ba_jacobian_int'
+        self.expressions = jacobian_tools.JacobianTools.parse_jacobians(self.test_path)
+        return super().setUp()
+
+    def test_parsable_expressions(self):
+        """
+        Test if Jacobian element strings are valid for eval()
+        """
+    
+        #make dummy parameters from dummy projection, point and camera
+        jacobian_parameters = make_parameters_dict(
+            scene_objects.Point3d(0, 0, 0),
+            camera.Camera(
+                camera.Intrinsics(fu=500, fv=500, cu=480, cv=270, width=960, height=540), 
+                (0, 0.5, 10), (0, 0, 0)))
+
+        for expression in self.expressions.values():
+            with self.subTest(expression = expression):
+                eval(expression, jacobian_parameters)
+
+class TestApproximationIsValid(unittest.TestCase):
+
+    def setUp(self) -> None:
+        self.test_path = 'ba_jacobian_int'
         self.expressions = jacobian_tools.JacobianTools.parse_jacobians(self.test_path)
         #set const variations for parameters
         self.const_variations = {
@@ -152,36 +175,20 @@ class TestJackobianIsValid(unittest.TestCase):
         self.approx_test_results_list = []
         return super().setUp()
     
-    def test_parsable_expressions(self):
-        """
-        Test if Jacobian element strings are valid for eval()
-        """
-    
-        #make dummy parameters from dummy projection, point and camera
-        jacobian_parameters = make_parameters_dict(
-            scene_objects.Point3d(0, 0, 0),
-            camera.Camera(
-                camera.Intrinsics(fx=500, fy=500, cx=480, cy=270, width=960, height=540), 
-                (0, 0.5, 10), (0, 0, 0)))
-
-        for expression in self.expressions.values():
-            with self.subTest(expression = expression):
-                eval(expression, jacobian_parameters)
-
     def test_jacobian_approx(self):
         """     
         Test for Jacobian approximating camera model correctly
         """
         #generate nominal parameter values for system
-        projections_dict, points_dict, cameras_dict = generate_sample_data(
-            camera.Intrinsics(fx=500, fy=500, cx=480, cy=270, width=960, height=540), 
+        projections_list, points_list, cameras_list = generate_sample_data(
+            camera.Intrinsics(fu=500, fv=500, cu=480, cv=270, width=960, height=540), 
             [(0, 0.5, 10)],
             [(0, 0, 0)])
         
-        for proj_id, nominal_projection in projections_dict.items():
+        for proj_id, nominal_projection in enumerate(projections_list):
             with self.subTest(proj_id = proj_id, nominal_projection=nominal_projection):
-                nominal_point = points_dict[nominal_projection.p_id]
-                nominal_camera = cameras_dict[nominal_projection.cam_id]
+                nominal_point = points_list[nominal_projection.p_id]
+                nominal_camera = cameras_list[nominal_projection.cam_id]
                 
                 #variate nominal camera and point parameters 
                 #one by one by positive and negative amount
@@ -194,16 +201,16 @@ class TestJackobianIsValid(unittest.TestCase):
                         if parameter in ['point.x', 'point.y', 'point.z']:
                             jcoeffs = np.array([
                                 [eval(jacobian_tools.JacobianTools.eval_jacobian_C(
-                                    self.expressions, self.ju_idxs[parameter][1], self.ju_idxs[parameter][0]), jacobian_parameters)],
+                                    self.expressions, *self.ju_idxs[parameter]), jacobian_parameters)],
                                 [eval(jacobian_tools.JacobianTools.eval_jacobian_C(
-                                self.expressions, self.jv_idxs[parameter][1], self.jv_idxs[parameter][0]), jacobian_parameters)]
+                                    self.expressions, *self.jv_idxs[parameter]), jacobian_parameters)]
                                 ])
                         else:
                             jcoeffs = np.array([
                                 [eval(jacobian_tools.JacobianTools.eval_jacobian_B(
-                                    self.expressions, self.ju_idxs[parameter][1], self.ju_idxs[parameter][0]), jacobian_parameters)],
+                                    self.expressions, *self.ju_idxs[parameter]), jacobian_parameters)],
                                 [eval(jacobian_tools.JacobianTools.eval_jacobian_B(
-                                    self.expressions, self.jv_idxs[parameter][1], self.jv_idxs[parameter][0]), jacobian_parameters)]
+                                    self.expressions, *self.jv_idxs[parameter]), jacobian_parameters)]
                                 ])
 
                         #make projections with a parameter variated in both directions 
@@ -219,8 +226,8 @@ class TestJackobianIsValid(unittest.TestCase):
                                 #but variated projection still might be off the image
                                 if variated_projection[0, 0] is not None and variated_projection[1, 0] is not None:
                                     residual = np.array([
-                                        [variated_projection[0, 0] - nominal_projection.x],
-                                        [variated_projection[1, 0] - nominal_projection.y]
+                                        [variated_projection[0, 0] - nominal_projection.u],
+                                        [variated_projection[1, 0] - nominal_projection.v]
                                     ])
                                     #record the results 
                                     self.approx_test_results_list.append([
@@ -228,7 +235,7 @@ class TestJackobianIsValid(unittest.TestCase):
                                         nominal_point.x, nominal_point.y, nominal_point.z,
                                         nominal_camera.roll, nominal_camera.pitch, nominal_camera.yaw,
                                         nominal_camera.center[0, 0], nominal_camera.center[1, 0], nominal_camera.center[2, 0],
-                                        nominal_projection.x, nominal_projection.y,
+                                        nominal_projection.u, nominal_projection.v,
                                         variated_projection[0, 0], variated_projection[1, 0],
                                         residual[0, 0], residual[1, 0],
                                         jcoeffs[0, 0], jcoeffs[1, 0],  
