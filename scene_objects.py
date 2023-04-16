@@ -76,7 +76,7 @@ class Box:
         # plane is defined by a point on it and a normal vector
         # so each plane is defined by normal vector and 4 points
         # estimate normal vector for each plane as a vector product of two edges constructing a plane
-        self.top_plane = Plane(self.points[:, :4], np.cross(self.points[:, 0] - self.points[:, 1], self.points[:, 0] - self.points[:, 3]))
+        self.top_plane = Plane(self.points[:, :4], np.cross(self.points[:, 0] - self.points[:, 3], self.points[:, 0] - self.points[:, 1]))
         self.bottom_plane = Plane(self.points[:, 4:], np.cross(self.points[:, 4] - self.points[:, 5], self.points[:, 4] - self.points[:, 7]))
         self.left_plane = Plane(self.points[:, [0, 4, 7, 3]], np.cross(self.points[:, 0] - self.points[:, 4], self.points[:, 0] - self.points[:, 3]))
         self.right_plane = Plane(self.points[:, [1, 2, 6, 5]], np.cross(self.points[:, 1] - self.points[:, 2], self.points[:, 1] - self.points[:, 5]))
@@ -101,6 +101,10 @@ class Box:
         # ray is parametrized as starting point l0 and direction l
         # P is intersection point
         # shift along the ray to the point of intersection P is t (P = l0 + t * l)
+
+        # check if ray is co-directed with plane's normal
+        if np.dot(ray.T, plane.normal) < 0:
+            return None
         
         # Set plane points with l0 as origin
         p0 = plane.points[:, 0:1] - l0

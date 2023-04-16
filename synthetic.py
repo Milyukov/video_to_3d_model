@@ -13,7 +13,7 @@ if __name__ == '__main__':
     intrinsics = camera.Intrinsics(fu=500, fv=500, cu=w/2, cv=h/2, width=w, height=h)
 
 
-    out = cv2.VideoWriter('rendered.avi', cv2.VideoWriter_fourcc(*'DIVX'), 1.0, (w, h), True)
+    out = cv2.VideoWriter('./test_results_data/rendered.avi', cv2.VideoWriter_fourcc(*'DIVX'), 1.0, (w, h), True)
     # initialize scene
     synthetic_scene = scene.Scene()
     # initialize cameras and visualize rendered scene on each camera
