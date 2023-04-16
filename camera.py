@@ -56,9 +56,36 @@ class Camera:
         # maximum distance of visibility in meters
         self.max_distance = 40
 
-    def project_point(self, point3d):
-        point3d_cam = point3d - self.center
-        point2d_hom = np.dot(self.intrinsics.mat, np.dot(self.w2c_transform, point3d_cam))
+    def project_point(self, point3d_w):
+        """
+        Projects 3D point in world coordinates on camera matrix.
+
+        ^                   ^
+        |                   |
+        |                   |
+        |                   C------>
+        |                    \
+        W--------->           \
+         \
+          \                             
+           \                            P
+
+        Let self.center be shift of C (camera center) relative to W (world origin).
+        Let P be a point to project on camera. 
+        Let it have point3d_w coordinates in world coordinate system 
+        and point3d_c coordinates in camera coordinate system, then
+        self.center + point3d_c = point3d_w -> point3d_c = self.center - point3d_w 
+            
+        Args:
+            point3d_w (ndarray): 3D point in world coordinates
+
+        Returns:
+            ndarray: 2D coordinates of point3d_w projected on camera
+        """
+        point3d_c = point3d_w - self.center
+        # point is shifted to camera coordinates system 
+        # now we need to change the axes and then project it on camera
+        point2d_hom = np.dot(self.intrinsics.mat, np.dot(self.w2c_transform, point3d_c))
         point2d = np.array([point2d_hom[0] / point2d_hom[2], point2d_hom[1] / point2d_hom[2]])
         if point2d[0] < 0 or point2d[0] >= self.intrinsics.width:
             return np.array([[None, None]]).T
@@ -66,19 +93,43 @@ class Camera:
             return np.array([[None, None]]).T
         return point2d
 
-    def project_points(self, points):
-        projected_points = np.zeros((2, len(points)))
-        for col, p in enumerate(points):
+    def project_points(self, points_w):
+        """
+        Projects 3D points in world coordinates on camera matrix.
+        Args:
+            points_w (ndarray): array of 3D points in world coordinates.
+
+        Returns:
+            ndarray: array of projected points.
+        """
+        projected_points = np.zeros((2, len(points_w)))
+        for col, p in enumerate(points_w):
             projected_points[:, col:col + 1] = self.project_point(p)
         return projected_points.T
     
     def eval_intensity(self, distance):
+        """
+        Evaluates intensity for rendered pixel based on the distance to projected 3D point (to emulate light).
+        Args:
+            distance (float): distance to projected 3D point.
+
+        Returns:
+            uint8: grayscale pixel value.
+        """
         if distance > self.max_distance:
             return 0
         return int(255 * (self.max_distance - distance) / self.max_distance)
 
-    def eval_distance(self, point):
-        dist = self.center - point
+    def eval_distance(self, point_w):
+        """
+        Evaluates distance between point_w and camera center in world coordinate system.
+        Args:
+            point_w (ndarray): 3D point in world coordinate system.
+
+        Returns:
+            float: distance between point_w and camera center in world coordinate system.
+        """
+        dist = self.center - point_w
         dist = np.linalg.norm(dist)
         return dist
 
@@ -95,17 +146,17 @@ class Camera:
             for u in range(self.intrinsics.width):
                 # reconstruct a ray in world axes
                 pix_hom = np.array([[u, v, 1.0]]).T
-                ray = np.dot(self.intrinsics.mat_inv, pix_hom)
-                ray = np.dot(self.w2c_transform.T, ray)
+                ray_c = np.dot(self.intrinsics.mat_inv, pix_hom)
+                ray_w = np.dot(self.w2c_transform.T, ray_c)
                 # intersect a ray with a scene in world axes
-                intersection_points = []
+                intersection_points_w = []
                 for obj in scene.objects:
-                    intersection_points.extend(obj.find_all_intersections(ray, self.center))
-                if len(intersection_points) > 0:
+                    intersection_points_w.extend(obj.find_all_intersections(ray_w, self.center))
+                if len(intersection_points_w) > 0:
                     # find closest point of intersection
                     min_dist = np.inf
-                    for point in intersection_points:
-                        dist = self.eval_distance(point)
+                    for point_w in intersection_points_w:
+                        dist = self.eval_distance(point_w)
                         if dist < min_dist:
                             min_dist = dist
                     # set pixel value to corresponding value
