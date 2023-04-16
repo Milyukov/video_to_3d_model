@@ -163,4 +163,3 @@ class Camera:
                     if min_dist != np.inf:
                         rendered_scene[v, u, :] = self.eval_intensity(min_dist)
         return rendered_scene[::-1, ::-1, :]
-    

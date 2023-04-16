@@ -65,8 +65,8 @@ def generate_sample_data(intrinsics, positions, orientations):
         cameras.append(camera.Camera(intrinsics, position, orientation))
 
     data_sampler = sampling.DataSampler()
-    projections_dict, points_dict, cameras_dict = data_sampler.sample(sampled_scene, cameras)
-    return projections_dict, points_dict, cameras_dict
+    projections_list, points_list = data_sampler.sample(sampled_scene, cameras)
+    return projections_list, points_list, cameras
 
 def get_variated_projection(point, camera, variations):
     """
@@ -180,15 +180,15 @@ class TestApproximationIsValid(unittest.TestCase):
         Test for Jacobian approximating camera model correctly
         """
         #generate nominal parameter values for system
-        projections_dict, points_dict, cameras_dict = generate_sample_data(
+        projections_list, points_list, cameras_list = generate_sample_data(
             camera.Intrinsics(fu=500, fv=500, cu=480, cv=270, width=960, height=540), 
             [(0, 0.5, 10)],
             [(0, 0, 0)])
         
-        for proj_id, nominal_projection in projections_dict.items():
+        for proj_id, nominal_projection in enumerate(projections_list):
             with self.subTest(proj_id = proj_id, nominal_projection=nominal_projection):
-                nominal_point = points_dict[nominal_projection.p_id]
-                nominal_camera = cameras_dict[nominal_projection.cam_id]
+                nominal_point = points_list[nominal_projection.p_id]
+                nominal_camera = cameras_list[nominal_projection.cam_id]
                 
                 #variate nominal camera and point parameters 
                 #one by one by positive and negative amount

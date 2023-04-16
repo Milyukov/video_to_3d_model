@@ -12,6 +12,12 @@ class Point3d:
 class Plane:
 
     def __init__(self, points, normal) -> None:
+        """
+        Creates a plane parametrization.
+        Args:
+            points (ndarray): array of 3D points on the given rectangle of the plane 3x4
+            normal (ndarray): coordinates of the normal to the plane
+        """
         self.points = points
         self.normal = normal if normal.shape == (3, 1) else np.expand_dims(normal, 1)
         self.d = np.abs(np.dot(np.mean(self.points, axis=1, keepdims=True).T, self.normal))
@@ -33,10 +39,11 @@ class Box:
             roll (double): roll angle, degrees
             pitch (double): pitch  angle, degrees
             yaw (double): yaw  angle, degrees
+            extrinsic_angles(bool): flag signaling whether extrinsic or intrinsic rotation should be applied (yaw->pitch->roll or roll->pitch->yaw).
         """
         self.parameters = (x, y, z, w, h, d, roll, pitch, yaw)
         '''
-                            Y         Z
+                            Y         X
                             ^        / 
                             |       /
                         P0 -|---------P1
@@ -45,7 +52,7 @@ class Box:
                     P3 ----------- P2 |
                      |   |  |  /   |  |
                      |  P4 -|------|--P5
-                     | /    0------| /-------------------> X
+                     | /    0------| /-------------------> Z
                      |/            |/
                      P7 -----------P6
         
@@ -78,6 +85,18 @@ class Box:
 
     @staticmethod
     def find_intersection(ray, l0, plane, debug=False):
+        """
+        Estimates intersection of a ray strating at point l0 with a plane.
+        Args:
+            ray (ndarray): direction of a ray
+            l0 (ndarray): starting point of a ray
+            plane (Plane): given plane
+            debug (bool, optional): Flag signaling whether points outside of 
+            parametrized rectangle of the plane should be returned. Defaults to False.
+
+        Returns:
+            ndarray: intersection point or None
+        """
         # Plane is parametrized as 3 or more points
         # ray is parametrized as starting point l0 and direction l
         # P is intersection point
@@ -118,6 +137,7 @@ class Box:
 
         Args:
             ray (ndarray): (x, y, z)-components of a ray
+            p0 (ndarray): (x, y, z)-components of a starting point of a ray
         """
         # for each plane
         # check if there's intersection  with a ray inside 4 points range in point P
