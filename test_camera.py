@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 from pathlib import Path
 import unittest
 
-def make_grid():
+def make_grid_scene():
     '''
     Makes a scene with 3x3 structure of 9 boxes aligned in XY plane
     '''
@@ -24,6 +24,17 @@ def make_grid():
     scene_grid.objects.append(Box(-3, -3, 0, 1, 1, 1, 0, 0, 0))
     scene_grid.objects.append(Box(0, -3, 0, 1, 1, 1, 0, 0, 0))
     scene_grid.objects.append(Box(3, -3, 0, 1, 1, 1, 0, 0, 0))
+    return scene_grid
+
+def make_axes_scene():
+    '''
+    Makes a scene with 3 orthogonal axes - X, Y, Z
+    '''
+    scene_grid = scene.Scene()
+    scene_grid.objects=[]
+    scene_grid.objects.append(Box(3, 0, 0, 6, 0.1, 0.1, 0, 0, 0 ))
+    scene_grid.objects.append(Box(0, 0, 3, 6, 0.1, 0.1, 0, 0, -np.deg2rad(90) ))
+    scene_grid.objects.append(Box(0, 3, 0, 6, 0.1, 0.1, np.deg2rad(90), 0, 0 ))
     return scene_grid
 
 class TestStringMethods(unittest.TestCase):
@@ -44,20 +55,29 @@ class TestCameraParameters(unittest.TestCase):
         self.default_camera = Camera(Intrinsics(500, 500, 480, 270, 960, 540), (0, 0.5, -10) , (0, 0, 0))
         self.default_scene = scene.Scene()
 
-        cam_yaw_pos = Camera(Intrinsics(500, 500, 480, 270, 960, 540), (0, 0.5, -10) , (0, 0, 30))
-        cam_yaw_neg = Camera(Intrinsics(500, 500, 480, 270, 960, 540), (0, 0.5, -10) , (0, 0, -30))
-        cam_pitch_pos = Camera(Intrinsics(500, 500, 480, 270, 960, 540), (0, 0.5, -10) , (0, 30, 0))
-        cam_pitch_neg = Camera(Intrinsics(500, 500, 480, 270, 960, 540), (0, 0.5, -10) , (0, -30, 0))
-        cam_roll_pos = Camera(Intrinsics(500, 500, 480, 270, 960, 540), (0, 0.5, -10) , (30, 0, 0))
-        cam_roll_neg = Camera(Intrinsics(500, 500, 480, 270, 960, 540), (0, 0.5, -10) , (-30, 0, 0))
-
+        #camera set to test simple single-axis rotations
+        cam_yaw_pos = Camera(Intrinsics(500, 500, 480, 270, 960, 540), (0, 0.5, -10) , (0, 0, np.deg2rad(30)))
+        cam_yaw_neg = Camera(Intrinsics(500, 500, 480, 270, 960, 540), (0, 0.5, -10) , (0, 0, -np.deg2rad(30)))
+        cam_pitch_pos = Camera(Intrinsics(500, 500, 480, 270, 960, 540), (0, 0.5, -10) , (0, np.deg2rad(30), 0))
+        cam_pitch_neg = Camera(Intrinsics(500, 500, 480, 270, 960, 540), (0, 0.5, -10) , (0, -np.deg2rad(30), 0))
+        cam_roll_pos = Camera(Intrinsics(500, 500, 480, 270, 960, 540), (0, 0.5, -10) , (np.deg2rad(30), 0, 0))
+        cam_roll_neg = Camera(Intrinsics(500, 500, 480, 270, 960, 540), (0, 0.5, -10) , (-np.deg2rad(30), 0, 0))
+        
+        #camera set 1 to test complex multiaxis rotations
+        cam_roll_pitch = Camera(Intrinsics(500, 500, 480, 270, 960, 540), (0, 0.5, -10) , (np.deg2rad(30), np.deg2rad(30), 0))
+        cam_roll_yaw  = Camera(Intrinsics(500, 500, 480, 270, 960, 540), (0, 0.5, -10) , (np.deg2rad(30), 0, np.deg2rad(30)))
+        cam_pitch_yaw = Camera(Intrinsics(500, 500, 480, 270, 960, 540), (0, 0.5, -10) , (0, np.deg2rad(30), np.deg2rad(30)))
+        
+        #camera set 2 to test complex multiaxis sequential rotations
+        axes_camera_init= Camera(Intrinsics(500, 500, 480, 270, 960, 540), (3, 2, -5), (0, 0 ,0))
+        axes_camera_roll = Camera(Intrinsics(500, 500, 480, 270, 960, 540), (3, 2, -5), (-np.pi / 2, 0 , 0))
+        axes_camera_roll_pitch = Camera(Intrinsics(500, 500, 480, 270, 960, 540), (3, 2, -5), (-np.pi / 2, np.pi / 6 , 0))
+        axes_camera_roll_pitch_yaw = Camera(Intrinsics(500, 500, 480, 270, 960, 540), (3, 2, -5), (-np.pi / 2, np.pi / 6 , - np.pi / 6))
         self.cases_cameras = [
-            cam_roll_neg, self.default_camera, cam_roll_pos,
-            cam_pitch_neg, self.default_camera, cam_pitch_pos,
-            cam_yaw_neg, self.default_camera, cam_yaw_pos
+            axes_camera_init, axes_camera_roll,  axes_camera_roll_pitch, axes_camera_roll_pitch_yaw 
             ]
         
-        scene_grid = make_grid()
+        scene_grid = make_axes_scene()
         self.cases_scenes = [scene_grid] * len(self.cases_cameras)
         return super().setUp()
     
@@ -81,11 +101,12 @@ class TestCameraParameters(unittest.TestCase):
             plt.imshow(camera.render_scene(scene))
             plt.text(0, 0, 
                      f'''
-                     width {camera.intrinsics.width}, height: {camera.intrinsics.height}
-                     fx: {camera.intrinsics.K[0, 0]}, fy: {camera.intrinsics.K[1, 1]}
-                     cx: {camera.intrinsics.K[0, 2]}, cy: {camera.intrinsics.K[1, 2]}
-                     tx: {camera.center[0, 0]}, ty: {camera.center[1, 0]}, tz: {camera.center[2, 0]}
-                     roll: {camera.roll}, pitch: {camera.pitch}, yaw: {camera.yaw}
+                     width {camera.intrinsics.width:.2f}, height: {camera.intrinsics.height:.2f}
+                     fu: {camera.intrinsics.fu:.2f}, fv: {camera.intrinsics.fv:.2f}
+                     cu: {camera.intrinsics.cu:.2f}, cv: {camera.intrinsics.cv:.2f}
+                     tx: {camera.center[0, 0]:.2f}, ty: {camera.center[1, 0]:.2f}, tz: {camera.center[2, 0]:.2f}
+                     roll: {np.rad2deg(camera.roll):.2f}, pitch: {np.rad2deg(camera.pitch):.2f}, yaw: {np.rad2deg(camera.yaw):.2f}
+                     view axis: {camera.w2c_transform[2, 0]:.2f}, {camera.w2c_transform[2, 1]:.2f}, {camera.w2c_transform[2, 2]:.2f}
                      ''')
             plt.savefig(fig_path / f'render_{i}.png')
             plt.clf()
