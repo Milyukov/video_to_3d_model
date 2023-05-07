@@ -7,6 +7,10 @@ import cv2
 import numpy as np
 from utils import *
 
+from pyba.CameraNetwork import CameraNetwork
+from pyba_wrapper import prepare_data
+from pyba.pyba import bundle_adjust 
+
 if __name__ == '__main__':
     w = 960
     h = 540
@@ -32,6 +36,12 @@ if __name__ == '__main__':
 
     data_sampler = sampling.DataSampler()
     projections_list, points_list = data_sampler.sample(synthetic_scene, cameras)
+
+    # perfrom reference BA
+    d = prepare_data(cameras, projections_list, len(points_list))
+    camNet = CameraNetwork(points2d=d['points2d'], calib=d)
+    bundle_adjust(camNet)
+
 
     # generate Jacobian matrix
     jacobians = jacobian_tools.JacobianTools.parse_jacobians('./ba_jacobian_int')
