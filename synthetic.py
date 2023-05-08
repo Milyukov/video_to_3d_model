@@ -37,12 +37,6 @@ if __name__ == '__main__':
     data_sampler = sampling.DataSampler()
     projections_list, points_list = data_sampler.sample(synthetic_scene, cameras)
 
-    # perfrom reference BA
-    d = prepare_data(cameras, projections_list, len(points_list))
-    camNet = CameraNetwork(points2d=d['points2d'], calib=d)
-    bundle_adjust(camNet)
-
-
     # generate Jacobian matrix
     jacobians = jacobian_tools.JacobianTools.parse_jacobians('./ba_jacobian_int')
     jacobian_tools.JacobianTools.eval_jacobian(jacobians, projections_list, points_list, cameras)
