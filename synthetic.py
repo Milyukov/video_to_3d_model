@@ -7,10 +7,6 @@ import cv2
 import numpy as np
 from utils import *
 
-from pyba.CameraNetwork import CameraNetwork
-from pyba_wrapper import prepare_data
-from pyba.pyba import bundle_adjust 
-
 if __name__ == '__main__':
     w = 960
     h = 540
@@ -23,16 +19,47 @@ if __name__ == '__main__':
     # initialize cameras and visualize rendered scene on each camera
     cameras = []
     # set up circle path
-    # X-components of the camera's positions in 3D space
-    xs = [(10.0 / 18.0) * x - 5.0 for x in range(18)]
     r = 4
     # Z-components of the camera's positions in 3D space
-    zs = [-np.sqrt(r ** 2 - x ** 2) for x in xs]
-    zs = [z if not np.isnan(z) else r for z in zs]
-    for index, (x, z) in enumerate(zip(xs, zs)):
+    zs = [(z / 18.0) * 2 * r - r for z in range(19)]
+    # x**2 + z**2 = r**2
+    # x = +-sqrt(r**2 - z**2)
+    # X-components of the camera's positions in 3D space
+    xs = [-np.sqrt(r ** 2 - z ** 2) for z in zs]
+    xs = [x if not np.isnan(x) else r for x in xs]
+    # visualize on 2D top-view projection X-Z
+    scale = 30
+    # 10 m x 10 m
+    projection_x_z = np.zeros((10 * scale, 10 * scale))
+    for (x, z) in zip(xs, zs):
         position = (x, 0.5, z)
-        orientation = (0, 0, 0) #-180 * np.arctan(z / r) / np.pi))
+        '''
+
+            ^ X
+            |   /|
+            |  /yaw
+            | /  |
+            |/_ _|_ _ _ _ _> z
+
+        '''
+        if np.abs(x) > 10e-3:
+            yaw = np.sign(x) * np.arctan(z / x)
+        else:
+            yaw = np.sign(z) * np.pi / 2
+        orientation = 0, 0, -yaw
+        print(position)
+        print(yaw)
+
+        center_coords = np.array([-np.int(x * scale) + 5 * scale, np.int(z * scale) + 5 * scale])
+        cv2.circle(projection_x_z, center_coords, 5, (255), 1)
+        ray = np.array([r * scale * np.cos(yaw), r * scale * np.sin(yaw)])
+        ray_end = center_coords + ray
+        cv2.line(projection_x_z, center_coords.astype(np.int), ray_end.astype(np.int), (255), 1)
+
         cameras.append(camera.Camera(intrinsics, position, orientation))
+
+    cv2.imshow("", projection_x_z)
+    cv2.waitKey()
 
     data_sampler = sampling.DataSampler()
     projections_list, points_list = data_sampler.sample(synthetic_scene, cameras)
@@ -60,6 +87,7 @@ if __name__ == '__main__':
 
     for cam_id, cam in enumerate(cameras):
         frame = cam.render_scene(synthetic_scene)
+        cv2.imwrite(f"./test_results_data/camera_0_img_00000{cam_id}.jpg", frame)
         frame = cv2.putText(np.array(frame), f'Frame #{cam_id}', (50, 50), font, fontScale, color, thickness, cv2.LINE_AA)
         frame = cv2.putText(np.array(frame), f'Cam pos: {cam.center}', (50, 100), font, fontScale, color, thickness, cv2.LINE_AA)
         frames.append(frame)

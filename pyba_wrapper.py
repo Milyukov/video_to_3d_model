@@ -1,4 +1,5 @@
 import camera
+import matplotlib.pyplot as plt
 import numpy as np
 import sampling
 import scene
@@ -61,5 +62,17 @@ if __name__ == '__main__':
 
     # perfrom reference BA
     d = prepare_data(cameras, projections_list, len(points_list))
-    camNet = CameraNetwork(points2d=d['points2d'], calib=d)
+    camNet = CameraNetwork(points2d=d['points2d'], calib=d, image_path="./test_results_data/camera_{cam_id}_img_00000{img_id}.jpg")
     bundle_adjust(camNet)
+
+    img = camNet.plot_2d(0, points='points2d')
+    plt.figure(figsize=(20,20))
+    plt.imshow(img, cmap='gray')
+    plt.axis('off')
+    plt.show()
+
+    fig = plt.figure(figsize=(10,10))
+    ax3d = fig.add_subplot(111, projection='3d')
+
+    camNet.draw(ax3d, size=20)
+    camNet.plot_3d(ax3d, img_id=0, size=10)
