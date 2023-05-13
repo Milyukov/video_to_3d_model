@@ -41,7 +41,7 @@ Given that
 $$ 
 \begin{pmatrix*}[l] 
 t_x & t_y & t_z 
-\end{pmatrix*}^T = \bold \it t_c 
+\end{pmatrix*}^T = \it t_c 
 $$ 
 
 is camera center coordinates in world coordinate frame and  
