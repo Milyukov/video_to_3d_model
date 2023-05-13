@@ -78,10 +78,9 @@ $$
 
 ### Extrinsics
 
-1. $'
-\begin{pmatrix} 
+1. $\begin{pmatrix} 
 t_x & t_y & t_z 
-\end{pmatrix}^T = \boldsymbol{t_c} '$   
+\end{pmatrix}^T = \boldsymbol{t_c}$   
 
 - camera center coordinates in world.
 
