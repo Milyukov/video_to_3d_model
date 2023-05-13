@@ -78,7 +78,7 @@ $$
 
 ### Extrinsics
 
-1. $ 
+1.   $ 
 \begin{pmatrix*}[l] 
 t_x & t_y & t_z 
 \end{pmatrix*}^T = \boldsymbol{t_c} 
