@@ -78,9 +78,9 @@ $$
 
 ### Extrinsics
 
-1. $\begin{pmatrix} 
+1. $\begin{smallmatrix} 
 t_x & t_y & t_z 
-\end{pmatrix} = \boldsymbol{t_c}$   - camera center coordinates in world.
+\end{smallmatrix} = \boldsymbol{t_c}$   - camera center coordinates in world.
 
 2. $ 
 \begin{pmatrix*}[l] 
