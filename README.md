@@ -26,13 +26,13 @@ graph TD;
 
 Cameras are agreed to be represented by Pinhole camera model, that is camera's intrinsic parameters are represented by 3x3 matrix K:
 
-$$ 
+$
 \begin{pmatrix} 
 f_{x} & 0 & c_{x} \\ 
 0 & f_{y} & c_{y} \\
 0 & 0 & 1 
 \end{pmatrix}
-$$
+$
 
 Camera rotation is agreed to be right-handed
 
