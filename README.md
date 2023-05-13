@@ -37,42 +37,54 @@ $$
 Camera rotation is agreed to be right-handed
 
 Given that  
+
 $$ 
 \begin{pmatrix*}[l] 
 t_x & t_y & t_z 
 \end{pmatrix*}^T = \bold \it t_c 
 $$ 
+
 is camera center coordinates in world coordinate frame and  
+
 $$ 
 \begin{pmatrix*}[l] 
 \theta_{roll} & \theta_{pitch} & \theta_{yaw} 
 \end{pmatrix*}^T
 $$  
+
 are Euler rotation angles (extrinsic or intrinsic) representing camera orientation in world coordinate frame we can define 3D point's  
+
 $$ \bold \it p = 
 \begin{pmatrix*}[l] 
 p_x & p_y & p_z , 1
 \end{pmatrix*}^T
 $$  
+
 projection  
+
 $$ \bold \it p' = 
 \begin{pmatrix*}[l] 
 p_u & p_v, 1 
 \end{pmatrix*}^T
 $$  
+
 on camera written in homogeneous coordinates as:
 
 $$
-\bold \it p' = K \cdot R \cdot p
+\it p' = K \cdot R \cdot p
 $$
 
 ### Camera model and parametrization
 
 ### Extrinsics
 
-1. $ \begin{pmatrix*}[l] t_x & t_y & t_z \end{pmatrix*}^T = \bold \it t_c $ - camera center coordinates in world.
+1. $ \begin{pmatrix*}[l] t_x & t_y & t_z \end{pmatrix*}^T = \bold \it t_c $ 
 
-2. $ \begin{pmatrix*}[l] \theta_{roll} & \theta_{pitch} & \theta_{yaw} \end{pmatrix*}^T$ - Euler rotation angles (extrinsic or intrinsic) representing camera orientation in world. Extrinsic rotations are rotation around fixed world axes. Intrinsic rotations are rotations around camera axes.
+- camera center coordinates in world.
+
+2. $ \begin{pmatrix*}[l] \theta_{roll} & \theta_{pitch} & \theta_{yaw} \end{pmatrix*}^T$ 
+
+- Euler rotation angles (extrinsic or intrinsic) representing camera orientation in world. Extrinsic rotations are rotation around fixed world axes. Intrinsic rotations are rotations around camera axes.
 
 World coordinate axes and rotations are **right-handed**. Camera orientation is set up by rotation matrix $ \bold R$ with rotation sequence roll (z) -> pitch (x) -> yaw (y):
 $$   \bold R^{ext}(\theta_{roll},\theta_{pitch}, \theta_{yaw})  = \bold R_{yaw}(\theta_{yaw}) \cdot \bold R_{pitch}(\theta_{pitch}) \cdot \bold R_{roll}(\theta_{roll})  $$
